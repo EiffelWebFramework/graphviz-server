@@ -12,8 +12,9 @@ inherit
 	SHARED_DATABASE_MANAGER
 
 feature -- Access
-	last_row_id : INTEGER_64
-	
+
+	last_row_id: INTEGER_64
+
 feature -- Query
 
 	retrieve_by_id (an_id: INTEGER): detachable GRAPH
@@ -147,7 +148,7 @@ feature -- Insert
 
 				-- Commit changes
 			db.commit
-			last_row_id :=l_insert.last_row_id
+			last_row_id := l_insert.last_row_id
 		end
 
 feature -- Delete
@@ -170,7 +171,6 @@ feature -- Delete
 				-- Commit changes
 			db.commit
 		end
-
 
 feature {NONE} -- Implementation
 

@@ -7,95 +7,105 @@ note
 
 class
 	GRAPHVIZ_FORMATS
+
 feature -- available formats
 
-	bmp : STRING = "bmp"
-		--Windows Bitmap Format
+	bmp: STRING = "bmp"
+			--Windows Bitmap Format
 
-	canon : STRING = "canon"
+	canon: STRING = "canon"
 
-	dot : STRING = "dot"
+	dot: STRING = "dot"
 
-	xdot : STRING = "xdot"
-		-- dot
+	xdot: STRING = "xdot"
+			-- dot
 
-	eps : STRING = "eps"
-		--Encapsulated PostScript
+	eps: STRING = "eps"
+			--Encapsulated PostScript
 
-	fig : STRING = "fig"
-		--FIG
-	gd : STRING = "gd"
+	fig: STRING = "fig"
+			--FIG
 
-	gd2 : STRING = "gd2"
-		--GD/GD2 formats
+	gd: STRING = "gd"
 
-	gif : STRING = "gif"
-		--GIF
+	gd2: STRING = "gd2"
+			--GD/GD2 formats
 
-	gtk : STRING = "gtk"
-		--GTK canvas
+	gif: STRING = "gif"
+			--GIF
 
-	ico : STRING = "ico"
-		--Icon Image File Format
+	gtk: STRING = "gtk"
+			--GTK canvas
 
-	imap : STRING = "imap"
+	ico: STRING = "ico"
+			--Icon Image File Format
 
-	cmapx : STRING = "cmapx"
-		--Server-side and client-side imagemaps
+	imap: STRING = "imap"
 
-	imap_np : STRING = "imap_np"
+	cmapx: STRING = "cmapx"
+			--Server-side and client-side imagemaps
 
-	cmapx_np : STRING = "cmapx_np"
-		--Server-side and client-side imagemaps
+	imap_np: STRING = "imap_np"
 
-	jpg : STRING = "jpg"
+	cmapx_np: STRING = "cmapx_np"
+			--Server-side and client-side imagemaps
 
-	jpeg : STRING = "jpeg"
+	jpg: STRING = "jpg"
 
-	jpe  : STRING = "jpe"
+	jpeg: STRING = "jpeg"
 
-	pdf  : STRING = "pdf"
-		--Portable Document Format (PDF)
-	plain : STRING = "plain"
+	jpe: STRING = "jpe"
 
-	plain_ext : STRING = "plain-ext"
-		--Simple text format
+	pdf: STRING = "pdf"
+			--Portable Document Format (PDF)
 
-	png : STRING = "png"
-		--Portable Network Graphics format
+	plain: STRING = "plain"
 
-	ps : STRING = "ps"
-		--PostScript
+	plain_ext: STRING = "plain-ext"
+			--Simple text format
 
-	ps2 : STRING = "ps2"
-		--PostScript for PDF
+	png: STRING = "png"
+			--Portable Network Graphics format
 
-	svg : STRING = "svg"
+	ps: STRING = "ps"
+			--PostScript
 
-	svgz : STRING = "svgz"
-		--Scalable Vector Graphics
-	tif : STRING = "tif"
+	ps2: STRING = "ps2"
+			--PostScript for PDF
 
-	tiff :STRING = "tiff"
-		--TIFF (Tag Image File Format)
-	vml  :STRING = "vml"
+	svg: STRING = "svg"
 
-	vmlz :STRING ="vmlz"
-		--Vector Markup Language (VML)
+	svgz: STRING = "svgz"
+			--Scalable Vector Graphics
 
-	vrml :STRING = "vrml"
-		--VRML
-	wbmp :STRING = "wbmp"
-		--Wireless BitMap format
-	webp :STRING = "webp"
-		--Image format for the Web
-	xlib :STRING = "xlib"
-		--Xlib canvas
+	tif: STRING = "tif"
+
+	tiff: STRING = "tiff"
+			--TIFF (Tag Image File Format)
+
+	vml: STRING = "vml"
+
+	vmlz: STRING = "vmlz"
+			--Vector Markup Language (VML)
+
+	vrml: STRING = "vrml"
+			--VRML
+
+	wbmp: STRING = "wbmp"
+			--Wireless BitMap format
+
+	webp: STRING = "webp"
+			--Image format for the Web
+
+	xlib: STRING = "xlib"
+			--Xlib canvas
 
 feature -- deprecated
-	cmap : STRING = "cmap"
-		--	Client-side imagemap (deprecated)
 
-	ismap : STRING = "ismap"
-		--erver-side imagemap (deprecated)	
+	cmap: STRING = "cmap"
+			--	Client-side imagemap (deprecated)
+
+	ismap: STRING = "ismap"
+			--erver-side imagemap (deprecated)
+
 end

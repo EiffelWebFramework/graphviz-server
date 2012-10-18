@@ -1,3 +1,11 @@
 src/EIFGENs
 src/database/EIFGENs
 src/graphviz/EIFGENs
+src/database/graph_manager.e.pretty src/database/shared_database_manager.e.pretty
+src/domain/graph.e.pretty
+src/resource/graph_handler.e.pretty src/resource/render_handler.e.pretty src/resource/root_handler.e.pretty
+src/GRAPHVIZ_SERVER.e.pretty
+src/graphviz/graphviz_command_builder.e.pretty src/graphviz/graphviz_formats.e.pretty
+src/utils/*.pretty
+EIFGENs
+src/resource/graph_handler.e.pretty src/resource/render_handler.e.pretty src/resource/root_handler.e.pretty

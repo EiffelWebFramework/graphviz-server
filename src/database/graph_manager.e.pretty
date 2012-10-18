@@ -11,6 +11,10 @@ inherit
 
 	SHARED_DATABASE_MANAGER
 
+feature -- Access
+
+	last_row_id: INTEGER_64
+
 feature -- Query
 
 	retrieve_by_id (an_id: INTEGER): detachable GRAPH
@@ -30,8 +34,8 @@ feature -- Query
 			l_query.execute_with_arguments (agent  (ia_row: SQLITE_RESULT_ROW): BOOLEAN
 				local
 					l_graph: GRAPH
-					l_descr: detachable STRING
-					l_title: detachable STRING
+					l_descr: detachable STRING_32
+					l_title: detachable STRING_32
 				do
 					if not ia_row.is_null (2) then
 						l_descr := ia_row.string_value (2).to_string_32
@@ -62,8 +66,8 @@ feature -- Query
 			l_query.execute (agent  (ia_row: SQLITE_RESULT_ROW): BOOLEAN
 				local
 					l_graph: GRAPH
-					l_descr: detachable STRING
-					l_title: detachable STRING
+					l_descr: detachable STRING_32
+					l_title: detachable STRING_32
 				do
 					if not ia_row.is_null (2) then
 						l_descr := ia_row.string_value (2).to_string_32
@@ -83,7 +87,7 @@ feature -- Query
 feature -- Update
 
 	update (a_graph: GRAPH)
-			-- insert a new graph `a_graph'
+			-- update a graph with `a_graph'
 		local
 			l_update: SQLITE_MODIFY_STATEMENT
 			l_descr_arg: SQLITE_BIND_ARG [ANY]
@@ -144,6 +148,7 @@ feature -- Insert
 
 				-- Commit changes
 			db.commit
+			last_row_id := l_insert.last_row_id
 		end
 
 feature -- Delete
