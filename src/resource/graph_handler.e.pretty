@@ -244,7 +244,6 @@ feature -- Collection JSON
 			cj_item.add_data (new_data ("title", a_graph.title, "Title"))
 			cj_item.add_link (new_link ("http:127.0.0.1:9090/graph/" + a_graph.id.out + "/render;jpg", "Image", "Graph", "Title", "image/jpg"))
 			cj_item.add_link (new_link ("http:127.0.0.1:9090/graph/" + a_graph.id.out + "/render;pdf", "Image", "Graph", "Title", "application/pdf"))
-			cj_item.add_link (new_link ("http:127.0.0.1:9090/graph/" + a_graph.id.out + "/render;gif", "Image", "Graph", "Title", "application/gif"))
 			cj.add_item (cj_item)
 		end
 

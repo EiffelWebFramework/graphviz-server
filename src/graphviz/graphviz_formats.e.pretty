@@ -8,26 +8,6 @@ note
 class
 	GRAPHVIZ_FORMATS
 
-
-feature -- Validator
-
-	is_supported (type: STRING) : BOOLEAN
-		-- is `type' a valid format.
-		do
-			type.to_lower
-			graphviz_types.compare_objects
-			Result := graphviz_types.has (type)
-		end
-feature -- Access
-	Graphviz_types : ARRAY[STRING]
-		-- List of valid Graphviz format types
-		once
-			Result := <<bmp,canon,dot,xdot,eps,fig,gd,gd2,gif,gtk,ico,imap,
-			cmapx,imap_np,cmapx_np,jpg,jpeg,jpe,pdf,plain,plain_ext,png,
-			ps,ps2,svg,svgz,tif,tiff,vml,vmlz,wbmp,webp,xlib>>
-		end
-
-
 feature -- available formats
 
 	bmp: STRING = "bmp"
@@ -127,8 +107,5 @@ feature -- deprecated
 
 	ismap: STRING = "ismap"
 			--erver-side imagemap (deprecated)
-
-
-
 
 end

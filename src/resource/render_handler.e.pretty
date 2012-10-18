@@ -26,10 +26,12 @@ inherit
 	WSF_RESOURCE_HANDLER_HELPER
 		redefine
 			do_get
+			--			do_post
+			--			do_put,
+			--			do_delete
 		end
 
 	GRAPH_MANAGER
-	GRAPHVIZ_FORMATS
 
 feature -- execute
 
@@ -57,14 +59,10 @@ feature --HTTP Methods
 			if attached req.orig_path_info as orig_path then
 				if attached {WSF_STRING} req.path_parameter ("id") as l_id and then attached {WSF_STRING} req.path_parameter ("type") as l_type then
 					if attached retrieve_by_id (l_id.value.to_integer_32) as l_graph then
-						if is_supported (l_type.value) then
-							build_graph (l_graph, l_type.value)
-							compute_response_get (req, res, l_id.value, l_type.value)
-						else
-							handle_bad_request_response ("Format [ " +l_type.value + " ] is not supported ", req, res)
-						end
+						build_graph (l_graph, l_type.value)
+						compute_response_get (req, res, l_id.value, l_type.value)
 					else
-						handle_resource_not_found_response ("Graph not found", req, res)
+						handle_internal_server_error ("Internal server error", req, res)
 					end
 				else
 					handle_resource_not_found_response ("Graph not found", req, res)
@@ -86,7 +84,7 @@ feature --HTTP Methods
 				l_msg := f.last_string
 			end
 			create h.make
-			set_content_type (h,type)
+			h.put_content_type ("application/pdf")
 			h.put_content_length (l_msg.count)
 			if attached req.request_time as time then
 				h.add_header ("Date:" + time.formatted_out ("ddd,[0]dd mmm yyyy [0]hh:[0]mi:[0]ss.ff2") + " GMT")
@@ -214,22 +212,6 @@ feature -- Graphviz utils
 		rescue
 			retried := True
 			retry
-		end
-
-feature {NONE} --Implementation
-
-	set_content_type (header : HTTP_HEADER; type : STRING)
-			-- set header contenty base on `type'
-		do
-			if  type ~ "pdf" then
-			        header.put_content_type ("application/pdf")
-			elseif type ~ "gif" then
-			        header.put_content_type_image_gif
-			elseif type ~ "jpg" then
-			        header.put_content_type_image_jpg
-			else
-			        header.put_content_type_text_plain -- default case
-			end
 		end
 
 note
