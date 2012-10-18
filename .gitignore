@@ -9,3 +9,6 @@ src/graphviz/graphviz_command_builder.e.pretty src/graphviz/graphviz_formats.e.p
 src/utils/*.pretty
 EIFGENs
 src/resource/graph_handler.e.pretty src/resource/render_handler.e.pretty src/resource/root_handler.e.pretty
+src/database/shared_database_manager.e
+src/graphviz/graphviz_command_builder.e.pretty src/graphviz/graphviz_formats.e.pretty
+src/resource/graph_handler.e.pretty src/resource/render_handler.e.pretty src/resource/root_handler.e.pretty
