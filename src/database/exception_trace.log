@@ -1,0 +1,168 @@
+
+repository: system execution failed.
+Following is the set of recorded exceptions:
+
+-------------------------------------------------------------------------------
+Class / Object      Routine                Nature of exception           Effect
+-------------------------------------------------------------------------------
+SQLITE_MODIFY_STATEMENT
+                    execute_internal @3    is_compiled:
+<0000000002580EE8>  (From SQLITE_STATEMENT)
+                                           Precondition violated.        Fail
+-------------------------------------------------------------------------------
+SQLITE_MODIFY_STATEMENT
+                    execute @6             
+<0000000002580EE8>                         Routine failure.              Fail
+-------------------------------------------------------------------------------
+EXAMPLE             make @9                                             
+<00000000025805A8>                         Routine failure.              Fail
+-------------------------------------------------------------------------------
+EXAMPLE             root's creation                                     
+<00000000025805A8>                         Routine failure.              Exit
+-------------------------------------------------------------------------------
+
+repository: system execution failed.
+Following is the set of recorded exceptions:
+
+-------------------------------------------------------------------------------
+Class / Object      Routine                Nature of exception           Effect
+-------------------------------------------------------------------------------
+SQLITE_MODIFY_STATEMENT
+                    execute_internal @3    is_compiled:
+<0000000002580EE8>  (From SQLITE_STATEMENT)
+                                           Precondition violated.        Fail
+-------------------------------------------------------------------------------
+SQLITE_MODIFY_STATEMENT
+                    execute @6             
+<0000000002580EE8>                         Routine failure.              Fail
+-------------------------------------------------------------------------------
+EXAMPLE             make @9                                             
+<00000000025805A8>                         Routine failure.              Fail
+-------------------------------------------------------------------------------
+EXAMPLE             root's creation                                     
+<00000000025805A8>                         Routine failure.              Exit
+-------------------------------------------------------------------------------
+
+repository: system execution failed.
+Following is the set of recorded exceptions:
+
+-------------------------------------------------------------------------------
+Class / Object      Routine                Nature of exception           Effect
+-------------------------------------------------------------------------------
+SQLITE_MODIFY_STATEMENT
+                    execute_internal @3    is_compiled:
+<0000000002560EE8>  (From SQLITE_STATEMENT)
+                                           Precondition violated.        Fail
+-------------------------------------------------------------------------------
+SQLITE_MODIFY_STATEMENT
+                    execute @6             
+<0000000002560EE8>                         Routine failure.              Fail
+-------------------------------------------------------------------------------
+EXAMPLE             make @9                                             
+<00000000025605A8>                         Routine failure.              Fail
+-------------------------------------------------------------------------------
+EXAMPLE             root's creation                                     
+<00000000025605A8>                         Routine failure.              Exit
+-------------------------------------------------------------------------------
+
+repository: system execution failed.
+Following is the set of recorded exceptions:
+
+-------------------------------------------------------------------------------
+Class / Object      Routine                Nature of exception           Effect
+-------------------------------------------------------------------------------
+SQLITE_MODIFY_STATEMENT
+                    execute_internal @3    is_compiled:
+<00000000025011A8>  (From SQLITE_STATEMENT)
+                                           Precondition violated.        Fail
+-------------------------------------------------------------------------------
+SQLITE_MODIFY_STATEMENT
+                    execute @6             
+<00000000025011A8>                         Routine failure.              Fail
+-------------------------------------------------------------------------------
+EXAMPLE             make @9                                             
+<00000000025005A8>                         Routine failure.              Fail
+-------------------------------------------------------------------------------
+EXAMPLE             root's creation                                     
+<00000000025005A8>                         Routine failure.              Exit
+-------------------------------------------------------------------------------
+
+repository: system execution failed.
+Following is the set of recorded exceptions:
+
+-------------------------------------------------------------------------------
+Class / Object      Routine                Nature of exception           Effect
+-------------------------------------------------------------------------------
+SQLITE_MODIFY_STATEMENT
+                    execute_internal @3    is_compiled:
+<00000000026811A8>  (From SQLITE_STATEMENT)
+                                           Precondition violated.        Fail
+-------------------------------------------------------------------------------
+SQLITE_MODIFY_STATEMENT
+                    execute @6             
+<00000000026811A8>                         Routine failure.              Fail
+-------------------------------------------------------------------------------
+EXAMPLE             make @9                                             
+<00000000026805A8>                         Routine failure.              Fail
+-------------------------------------------------------------------------------
+EXAMPLE             root's creation                                     
+<00000000026805A8>                         Routine failure.              Exit
+-------------------------------------------------------------------------------
+
+repository: system execution failed.
+Following is the set of recorded exceptions:
+
+-------------------------------------------------------------------------------
+Class / Object      Routine                Nature of exception           Effect
+-------------------------------------------------------------------------------
+SQLITE_QUERY_STATEMENT
+                    make @7                a_statement_is_complete:
+<00000000028371B8>  (From SQLITE_STATEMENT)
+                                           Precondition violated.        Fail
+-------------------------------------------------------------------------------
+GRAPH_MANAGER       retrieve_all @2                                     
+<00000000028305E8>                         Routine failure.              Fail
+-------------------------------------------------------------------------------
+EXAMPLE             make @5                                             
+<00000000028305A8>                         Routine failure.              Fail
+-------------------------------------------------------------------------------
+EXAMPLE             root's creation                                     
+<00000000028305A8>                         Routine failure.              Exit
+-------------------------------------------------------------------------------
+
+repository: system execution failed.
+Following is the set of recorded exceptions:
+
+-------------------------------------------------------------------------------
+Class / Object      Routine                Nature of exception           Effect
+-------------------------------------------------------------------------------
+SQLITE_RESULT_ROW   string_value @5        not_a_column_is_null:        
+<00000000024876F8>                         Precondition violated.        Fail
+-------------------------------------------------------------------------------
+GRAPH_MANAGER       inline-agent#1 of retrieve_all @1
+<00000000024805E8>                         Routine failure.              Fail
+-------------------------------------------------------------------------------
+PREDICATE           fast_item                                           
+<0000000002487698>  (From FUNCTION)        Routine failure.              Fail
+-------------------------------------------------------------------------------
+PREDICATE           item @5                                             
+<0000000002487698>  (From FUNCTION)        Routine failure.              Fail
+-------------------------------------------------------------------------------
+SQLITE_QUERY_STATEMENT
+                    execute_internal @44   
+<0000000002487278>  (From SQLITE_STATEMENT)
+                                           Routine failure.              Rescue
+-------------------------------------------------------------------------------
+SQLITE_QUERY_STATEMENT
+                    execute @9             
+<0000000002487278>                         Routine failure.              Fail
+-------------------------------------------------------------------------------
+GRAPH_MANAGER       retrieve_all @3                                     
+<00000000024805E8>                         Routine failure.              Fail
+-------------------------------------------------------------------------------
+EXAMPLE             make @5                                             
+<00000000024805A8>                         Routine failure.              Fail
+-------------------------------------------------------------------------------
+EXAMPLE             root's creation                                     
+<00000000024805A8>                         Routine failure.              Exit
+-------------------------------------------------------------------------------
