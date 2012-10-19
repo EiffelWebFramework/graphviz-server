@@ -1,5 +1,5 @@
 note
-	description: "Summary description for {GRAPH_RESOURCE}."
+	description: "GRAPH_HANDLER handle the graph resources, it allow create, get one or all, delete and updates graphs"
 	author: ""
 	date: "$Date$"
 	revision: "$Revision$"
@@ -26,9 +26,9 @@ inherit
 	WSF_RESOURCE_HANDLER_HELPER
 		redefine
 			do_get,
-			do_post
-			--			do_put,
-			--			do_delete
+			do_post,
+			do_put,
+			do_delete
 		end
 
 	SHARED_EJSON
@@ -53,6 +53,8 @@ feature -- execute
 
 feature -- HTTP Methods
 
+		--| Right now conditional GET and PUT are not implemented.
+
 	do_get (req: WSF_REQUEST; res: WSF_RESPONSE)
 			-- Using GET to retrieve resource information.
 			-- If the GET request is SUCCESS, we response with
@@ -61,8 +63,14 @@ feature -- HTTP Methods
 			-- 404 Resource not found
 		local
 			cj_error: CJ_ERROR
-			cj_item: CJ_ITEM
 		do
+				--| TODO refactor code.
+				--| GET need to handle two different kind of request now.
+				--| The first case, /graph, mean retrieve all graphs
+				--| The second case, /graph/{id} with the path parametrer id,
+				--| in this case retrive the graph with the given id.
+				--| Maybe the first case need to be refactored and removed to a new
+				--| handler possibly the SEARCH_HANLDER.
 			if attached req.orig_path_info as orig_path then
 				if attached get_graph_id_from_path (orig_path) as l_id then
 						-- retrieve a graph identidied by l_id
@@ -131,11 +139,13 @@ feature -- HTTP Methods
 		do
 			l_post := retrieve_data (req)
 			if attached extract_cj_request (l_post) as l_graph then
-					-- save graph and generate graphs in differents formats
+					-- save graph
 					-- return the location uri of the graph and return a 201
+					--| Here maybe we need to verify if the save action in
+					--| was succesful or not, if not was successfull, we need to
+					--| send a 50x error.
 				insert (l_graph)
 				l_graph.set_id (last_row_id.to_integer_32)
-					--build_graph(l_graph)
 				compute_response_post (req, res, l_graph)
 			else
 				handle_bad_request_response (l_post + "%N is not a valid Graph", req, res)
@@ -145,9 +155,13 @@ feature -- HTTP Methods
 	compute_response_post (req: WSF_REQUEST; res: WSF_RESPONSE; a_graph: GRAPH)
 		local
 			h: HTTP_HEADER
-			l_msg: STRING
 			l_location: STRING
 		do
+				--| Here we send a response with status code 201 and the uri of
+				--| the new resource.
+				--| Other option is send a 201 and a redirect to http://127.0.0.1:9090/graph
+				--| the problem here is that redirect action rewrite the location, I'm not
+				--| sure if that behavior is ok.
 			create h.make
 			h.put_content_type ("application/vnd.collection+json")
 			if attached req.http_host as host then
@@ -158,6 +172,77 @@ feature -- HTTP Methods
 				h.put_utc_date (time)
 			end
 			res.set_status_code ({HTTP_STATUS_CODE}.created)
+			res.put_header_text (h.string)
+		end
+
+	do_delete (req: WSF_REQUEST; res: WSF_RESPONSE)
+			-- Here we use DELETE to cancel a graph description.
+			-- 200 if is ok
+			-- 404 Resource not found
+			-- 500 if we have an internal server error
+		do
+			if attached req.orig_path_info as orig_path then
+				if attached {WSF_STRING} req.path_parameter ("id") as l_id then
+					delete_by_id (l_id.value.to_integer_32)
+					compute_response_delete (req, res)
+				else
+					handle_resource_not_found_response (orig_path + " not found in this server", req, res)
+				end
+			end
+		end
+
+	compute_response_delete (req: WSF_REQUEST; res: WSF_RESPONSE)
+		local
+			h: HTTP_HEADER
+		do
+			create h.make
+			h.put_content_type ("application/vnd.collection+json")
+			if attached req.request_time as time then
+				h.put_utc_date (time)
+			end
+			res.set_status_code ({HTTP_STATUS_CODE}.no_content)
+			res.put_header_text (h.string)
+		end
+
+	do_put (req: WSF_REQUEST; res: WSF_RESPONSE)
+			-- Updating a resource with PUT
+			-- A successful PUT request will not create a new resource, instead it will
+			-- change the state of the resource identified by the current uri.
+			-- If success we response with 200.
+			-- 404 if the graph is not found
+			-- 400 in case of a bad request
+			-- 500 internal server error
+		local
+			l_put: STRING
+		do
+			l_put := retrieve_data (req)
+			if attached req.orig_path_info as orig_path then
+				if attached {WSF_STRING} req.path_parameter ("id") as l_id then
+					if attached extract_cj_request (l_put) as lreq_graph and then attached retrieve_by_id (l_id.value.to_integer_32) as ldb_graph then
+						ldb_graph.set_description (lreq_graph.description)
+						ldb_graph.set_title (lreq_graph.title)
+						ldb_graph.set_content (lreq_graph.content)
+						update (ldb_graph)
+						compute_response_put (req, res)
+					else
+						handle_resource_not_found_response ("The resource " + l_id.value + " was not found ", req, res)
+					end
+				end
+			end
+		end
+
+	compute_response_put (req: WSF_REQUEST; res: WSF_RESPONSE)
+		local
+			h: HTTP_HEADER
+		do
+				--| Here we send a response with status code 200,
+				--| Maybe we also can send a redirect to the resource.
+			create h.make
+			h.put_content_type ("application/vnd.collection+json")
+			if attached req.request_time as time then
+				h.put_utc_date (time)
+			end
+			res.set_status_code ({HTTP_STATUS_CODE}.ok)
 			res.put_header_text (h.string)
 		end
 
