@@ -59,7 +59,7 @@ feature --HTTP Methods
 		do
 			create h.make
 			h.put_content_type ("application/vnd.collection+json")
-			l_msg := collection_json_root
+			l_msg := collection_json_root (req)
 			h.put_content_length (l_msg.count)
 			if attached req.request_time as time then
 				h.add_header ("Date:" + time.formatted_out ("ddd,[0]dd mmm yyyy [0]hh:[0]mi:[0]ss.ff2") + " GMT")
@@ -69,18 +69,28 @@ feature --HTTP Methods
 			res.put_string (l_msg)
 		end
 
-	collection_json_root: STRING = "[
+	collection_json_root (req: WSF_REQUEST): STRING
+		do
+			create Result.make_from_string (collection_json_root_tpl)
+			if attached req.http_host as l_host then
+				Result.replace_substring_all ("$ROOT_URL", "http://" + l_host)
+			else
+				Result.replace_substring_all ("$ROOT_URL", "")
+			end
+		end
+
+	collection_json_root_tpl: STRING = "[
 					{
 			   	 "collection": {
 			        "items": [],
 			        "links": [
 			            {
-			                "href": "http://127.0.0.1:9090/graph",
+			                "href": "$ROOT_URL/graph",
 			                "prompt": "Graph List",
 			                "rel": "Graph"
 			            },
 			            {
-			                "href": "http://127.0.0.1:9090/user",
+			                "href": "$ROOT_URL/user",
 			                "prompt": "User List",
 			                "rel": "Users"
 			            }

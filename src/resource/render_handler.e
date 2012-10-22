@@ -96,18 +96,28 @@ feature --HTTP Methods
 			res.put_string (l_msg)
 		end
 
-	collection_json_root: STRING = "[
+	collection_json_root (req: WSF_REQUEST): STRING
+		do
+			create Result.make_from_string (collection_json_root_tpl)
+			if attached req.http_host as l_host then
+				Result.replace_substring_all ("$ROOT_URL", "http://" + l_host)
+			else
+				Result.replace_substring_all ("$ROOT_URL", "")
+			end
+		end
+
+	collection_json_root_tpl: STRING = "[
 					{
 			   	 "collection": {
 			        "items": [],
 			        "links": [
 			            {
-			                "href": "http://127.0.0.1:9090/graph",
+			                "href": "$ROOT_URL/graph",
 			                "prompt": "Graph List",
 			                "rel": "Graph"
 			            },
 			            {
-			                "href": "http://127.0.0.1:9090/user",
+			                "href": "$ROOT_URL/user",
 			                "prompt": "User List",
 			                "rel": "Users"
 			            }
@@ -143,8 +153,9 @@ feature -- File Helper
 	create_file (file: STRING; content: STRING_32)
 		local
 			f: PLAIN_TEXT_FILE
-			l_content: STRING
+--			l_content: STRING
 		do
+			-- FIXME: content will be converted to STRING_8 .. thus possible data loss
 			create f.make_create_read_write (file)
 			if f.exists and then f.is_access_writable then
 				content.right_adjust
