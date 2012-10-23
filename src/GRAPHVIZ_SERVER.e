@@ -7,7 +7,6 @@ class
 	GRAPHVIZ_SERVER
 
 inherit
-
 	ANY
 
 	WSF_URI_TEMPLATE_ROUTED_SERVICE
@@ -15,6 +14,8 @@ inherit
 	WSF_HANDLER_HELPER
 
 	WSF_DEFAULT_SERVICE
+
+	GRAPHVIZ_SERVER_URI_TEMPLATES
 
 create
 	make
@@ -43,40 +44,11 @@ feature {NONE} -- Initialization
 			create render_handler
 				-- the uri templates that we have here are opaque, only for API developer.
 				-- the client should don't take care of it
-			router.handle_with_request_methods ("/", root_handler, router.methods_GET)
-			router.handle_with_request_methods ("/graph", graph_handler, router.methods_POST + router.methods_GET)
-			router.handle_with_request_methods ("/graph/{id}", graph_handler, router.methods_GET + router.methods_DELETE + router.methods_PUT)
-			router.handle_with_request_methods ("/graph/{id}/render;{type}", render_handler, router.methods_GET)
+			router.map_with_request_methods (create {WSF_URI_MAPPING}.make ("/", root_handler), router.methods_GET)
+			router.map_with_request_methods (create {WSF_URI_MAPPING}.make_trailing_slash_ignored (graph_uri, graph_handler), router.methods_GET_POST)
+			router.map_with_request_methods (create {WSF_URI_TEMPLATE_MAPPING}.make_from_template (graph_id_type_uri_template, render_handler), router.methods_GET)
+			router.map_with_request_methods (create {WSF_URI_TEMPLATE_MAPPING}.make_from_template (graph_id_uri_template, graph_handler), router.methods_GET_PUT_DELETE)
 		end
-
---	setup_router_2
---		local
---			create_graph_handler: CREATE_GRAPH_HANDLER
---			update_graph_handler: UPDATE_GRAPH_HANDLER
---			rerieve_graph_handler : RETRIEVE_GRAPH_HANDLER
---			trash_graph_handler : TRASH_GRAPH_HANDLER
---		do
---			create create_graph_handler
---			create update_graph_handler
---			create rerieve_graph_handler
---			create trash_graph_handler
---			-- the uri templates that we have here are opaque, only for API developer.
---			-- the client should don't take care of it
-
---			--create a graph
---			router.handle_with_request_methods ("/graph", create_graph_handler, router.methods_POST)
---			router.handle_with_request_methods ("/graph/{id}", create_graph_handler, router.methods_PUT)
-
---			--update a graph
---			router.handle_with_request_methods ("/graph/{id}", update_graph_handler, router.methods_PUT)
-
---			-- retrieve a graph
---			router.handle_with_request_methods ("/graph/{id}", update_graph_handler, router.methods_GET)
-
---			-- delete a graph
---			router.handle_with_request_methods ("/graph/{id}", update_graph_handler, router.methods_GET)
-
---		end
 
 feature -- Execution
 

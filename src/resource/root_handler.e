@@ -24,6 +24,8 @@ inherit
 
 	REFACTORING_HELPER
 
+	GRAPHVIZ_SERVER_URI_TEMPLATES
+
 feature -- execute
 
 	uri_execute (req: WSF_REQUEST; res: WSF_RESPONSE)
@@ -62,7 +64,7 @@ feature --HTTP Methods
 			l_msg := collection_json_root (req)
 			h.put_content_length (l_msg.count)
 			if attached req.request_time as time then
-				h.add_header ("Date:" + time.formatted_out ("ddd,[0]dd mmm yyyy [0]hh:[0]mi:[0]ss.ff2") + " GMT")
+				h.put_utc_date (time)
 			end
 			res.set_status_code ({HTTP_STATUS_CODE}.ok)
 			res.put_header_text (h.string)
@@ -72,11 +74,8 @@ feature --HTTP Methods
 	collection_json_root (req: WSF_REQUEST): STRING
 		do
 			create Result.make_from_string (collection_json_root_tpl)
-			if attached req.http_host as l_host then
-				Result.replace_substring_all ("$ROOT_URL", "http://" + l_host)
-			else
-				Result.replace_substring_all ("$ROOT_URL", "")
-			end
+			Result.replace_substring_all ("$GRAPH_URL", req.absolute_script_url (graph_uri))
+			Result.replace_substring_all ("$USER_URL", req.absolute_script_url (user_uri))
 		end
 
 	collection_json_root_tpl: STRING = "[
@@ -85,12 +84,12 @@ feature --HTTP Methods
 			        "items": [],
 			        "links": [
 			            {
-			                "href": "$ROOT_URL/graph",
+			                "href": "$GRAPH_URL",
 			                "prompt": "Graph List",
 			                "rel": "Graph"
 			            },
 			            {
-			                "href": "$ROOT_URL/user",
+			                "href": "$USER_URL",
 			                "prompt": "User List",
 			                "rel": "Users"
 			            }

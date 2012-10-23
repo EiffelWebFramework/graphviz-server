@@ -8,7 +8,6 @@ class
 	GRAPH_HANDLER
 
 inherit
-
 	WSF_URI_HANDLER
 		rename
 			execute as uri_execute,
@@ -32,6 +31,8 @@ inherit
 		end
 
 	SHARED_EJSON
+
+	GRAPHVIZ_SERVER_URI_TEMPLATES
 
 	GRAPH_MANAGER
 
@@ -118,7 +119,7 @@ feature -- HTTP Methods
 			l_msg := msg
 			h.put_content_length (l_msg.count)
 			if attached req.request_time as time then
-				h.add_header ("Date:" + time.formatted_out ("ddd,[0]dd mmm yyyy [0]hh:[0]mi:[0]ss.ff2") + " GMT")
+				h.put_utc_date (time)
 			end
 			res.set_status_code ({HTTP_STATUS_CODE}.ok)
 			res.put_header_text (h.string)
@@ -164,10 +165,8 @@ feature -- HTTP Methods
 				--| sure if that behavior is ok.
 			create h.make
 			h.put_content_type ("application/vnd.collection+json")
-			if attached req.http_host as host then
-				l_location := "http://" + host + req.request_uri + "/" + a_graph.id.out
-				h.put_location (l_location)
-			end
+			l_location := req.absolute_script_url (graph_id_uri (a_graph.id))
+			h.put_location (l_location)
 			if attached req.request_time as time then
 				h.put_utc_date (time)
 			end
@@ -323,34 +322,31 @@ feature -- Collection JSON
 		local
 			cj_item: CJ_ITEM
 		do
-			create cj_item.make (req.absolute_script_url ("/graph/" + a_graph.id.out))
+			create cj_item.make (req.absolute_script_url (graph_id_uri (a_graph.id)))
 			cj_item.add_data (new_data ("description", a_graph.description, "Description"))
-			cj_item.add_data (new_data ("content", a_graph.content, "Grahp"))
+			cj_item.add_data (new_data ("content", a_graph.content, "Graph"))
 			cj_item.add_data (new_data ("title", a_graph.title, "Title"))
-			cj_item.add_link (new_link (req.absolute_script_url ("/graph/" + a_graph.id.out + "/render;jpg"), "Image", "Graph", "Title", "image/jpg"))
-			cj_item.add_link (new_link (req.absolute_script_url ("/graph/" + a_graph.id.out + "/render;pdf"), "Image", "Graph", "Title", "application/pdf"))
-			cj_item.add_link (new_link (req.absolute_script_url ("/graph/" + a_graph.id.out + "/render;gif"), "Image", "Graph", "Title", "application/gif"))
+			cj_item.add_link (new_link (req.absolute_script_url (graph_id_type_uri (a_graph.id, "jpg")), "Image", "Graph", "Title", "image/jpg"))
+			cj_item.add_link (new_link (req.absolute_script_url (graph_id_type_uri (a_graph.id, "pdf")), "Image", "Graph", "Title", "application/pdf"))
+			cj_item.add_link (new_link (req.absolute_script_url (graph_id_type_uri (a_graph.id, "gif")), "Image", "Graph", "Title", "application/gif"))
 			cj.add_item (cj_item)
 		end
 
 	collection_json_graph (req: WSF_REQUEST): STRING
 		do
 			create Result.make_from_string (collection_json_graph_tpl)
-			if attached req.http_host as l_host then
-				Result.replace_substring_all ("$ROOT_URL", "http://" + l_host)
-			else
-				Result.replace_substring_all ("$ROOT_URL", "")
-			end
+			Result.replace_substring_all ("$GRAPH_URL", req.absolute_script_url (graph_uri))
+			Result.replace_substring_all ("$HOME_URL", req.absolute_script_url (home_uri))
 		end
 
 	collection_json_graph_tpl: STRING = "[
 				{
 			   	 "collection": {
-				   	"href": "$ROOT_URL/graph",
+				   	"href": "$GRAPH_URL",
 			        "items": [],
 			        "links": [
 			            {
-			                "href": "$ROOT_URL/",
+			                "href": "$HOME_URL",
 			                "prompt": "Home Graph",
 			                "rel": "Home"
 			            }

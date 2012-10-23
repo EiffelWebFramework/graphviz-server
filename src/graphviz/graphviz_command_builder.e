@@ -13,7 +13,7 @@ create
 
 feature -- command
 
-	command: detachable STRING
+	command: STRING
 
 feature -- Initialization
 
