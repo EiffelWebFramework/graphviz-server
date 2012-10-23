@@ -30,6 +30,7 @@ inherit
 
 	GRAPH_MANAGER
 	GRAPHVIZ_FORMATS
+	GRAPHVIZ_SERVER_URI_TEMPLATES
 
 feature -- execute
 
@@ -45,6 +46,13 @@ feature -- execute
 			execute_methods (req, res)
 		end
 
+feature -- Logging
+
+	log (m: READABLE_STRING_GENERAL)
+		do
+			print (m)
+		end
+
 feature --HTTP Methods
 
 	do_get (req: WSF_REQUEST; res: WSF_RESPONSE)
@@ -53,6 +61,8 @@ feature --HTTP Methods
 			-- 200 OK, and a representation of the root collection JSON
 			-- If the GET request is not SUCCESS, we response with
 			-- 404 Resource not found
+		local
+			m: STRING
 		do
 			if attached req.orig_path_info as orig_path then
 				if attached {WSF_STRING} req.path_parameter ("id") as l_id and then attached {WSF_STRING} req.path_parameter ("type") as l_type then
@@ -61,7 +71,14 @@ feature --HTTP Methods
 							build_graph (l_graph, l_type.value)
 							compute_response_get (req, res, l_id.value, l_type.value)
 						else
-							handle_bad_request_response ("Format [ " +l_type.value + " ] is not supported ", req, res)
+							m := "Format [" + l_type.value + "] is not supported. Try one of the following: "
+							across
+								Graphviz_types as c
+							loop
+								m.append (c.item)
+								m.append_character (' ')
+							end
+							handle_bad_request_response (m, req, res)
 						end
 					else
 						handle_resource_not_found_response ("Graph not found", req, res)
@@ -77,47 +94,51 @@ feature --HTTP Methods
 			h: HTTP_HEADER
 			l_msg: STRING
 			f: RAW_FILE
+			fn: FILE_NAME
 		do
 			l_msg := ""
-			create f.make_open_read (document_root + "\Graph_" + id + "." + type)
-			if f.exists and then f.is_access_writable then
+			create fn.make_from_string (document_root)
+			fn.set_file_name ("Graph_" + id + "." + type)
+			create f.make (fn.string)
+			if f.exists and then f.is_access_readable then
+				f.open_read
 				f.read_stream (f.count)
 				f.close
 				l_msg := f.last_string
+
+				create h.make
+				set_content_type (h,type)
+				h.put_content_length (l_msg.count)
+				if attached req.request_time as time then
+					h.put_utc_date (time)
+				end
+				res.set_status_code ({HTTP_STATUS_CODE}.ok)
+				res.put_header_text (h.string)
+				res.put_string (l_msg)
+			else
+				handle_internal_server_error ("Unable to generate output %""+ type +"%" for graph %""+ id.out +"%".", req, res)
 			end
-			create h.make
-			set_content_type (h,type)
-			h.put_content_length (l_msg.count)
-			if attached req.request_time as time then
-				h.add_header ("Date:" + time.formatted_out ("ddd,[0]dd mmm yyyy [0]hh:[0]mi:[0]ss.ff2") + " GMT")
-			end
-			res.set_status_code ({HTTP_STATUS_CODE}.ok)
-			res.put_header_text (h.string)
-			res.put_string (l_msg)
 		end
 
 	collection_json_root (req: WSF_REQUEST): STRING
 		do
 			create Result.make_from_string (collection_json_root_tpl)
-			if attached req.http_host as l_host then
-				Result.replace_substring_all ("$ROOT_URL", "http://" + l_host)
-			else
-				Result.replace_substring_all ("$ROOT_URL", "")
-			end
+			Result.replace_substring_all ("$GRAPH_URL", req.absolute_script_url (graph_uri))
+			Result.replace_substring_all ("$USER_URL", req.absolute_script_url (user_uri))
 		end
 
 	collection_json_root_tpl: STRING = "[
-					{
+				{
 			   	 "collection": {
 			        "items": [],
 			        "links": [
 			            {
-			                "href": "$ROOT_URL/graph",
+			                "href": "$GRAPH_URL",
 			                "prompt": "Graph List",
 			                "rel": "Graph"
 			            },
 			            {
-			                "href": "$ROOT_URL/user",
+			                "href": "$USER_URL",
 			                "prompt": "User List",
 			                "rel": "Users"
 			            }
@@ -167,9 +188,14 @@ feature -- File Helper
 feature -- Graphviz utils
 
 	build_graph (a_graph: GRAPH; type: STRING)
+		local
+			fn: FILE_NAME
 		do
-			create_file (document_root + "\" + "temp" + a_graph.id.out + ".graphviz", a_graph.content)
-			generate_graphs (document_root + "\" + "temp" + a_graph.id.out + ".graphviz", "Graph_" + a_graph.id.out, type)
+			create fn.make_from_string (document_root)
+			fn.set_file_name ("temp" + a_graph.id.out)
+			fn.add_extension ("graphviz")
+			create_file (fn.string, a_graph.content)
+			generate_graphs (fn.string, "Graph_" + a_graph.id.out, type)
 		end
 
 	last_error: INTEGER
@@ -177,20 +203,18 @@ feature -- Graphviz utils
 	generate_graphs (content_file: STRING; name: STRING; type: STRING)
 		local
 			gcb: GRAPHVIZ_COMMAND_BUILDER
-			str: detachable STRING
 		do
 				--create gcb.make_with_format ({GRAPHVIZ_FORMATS}.jpg,content_file,name)
 			create gcb.make_with_format (type, content_file, name)
-			print ("Graph generation%N")
+			log ("Graph generation%N")
 			if attached gcb.command as command then
-				str := output_of_command (command, document_root)
-				if attached str as s then
-					print (s + "%N")
+				if attached output_of_command (command, document_root) as s then
+					log (s + "%N")
 				else
-					print ("Nothing!!")
+					log ("Nothing!!")
 				end
 			end
-			print ("End Process!!!")
+			log ("End Process!!!")
 		end
 
 	output_of_command (a_cmd, a_dir: STRING): detachable STRING
@@ -213,10 +237,10 @@ feature -- Graphviz utils
 				p.redirect_input_to_stream
 				p.redirect_output_to_agent (agent  (res: STRING; s: STRING)
 					do
-						if s /= Void then
-							res.append_string (s)
-						end
-					end (Result, ?))
+						res.append_string (s)
+					end (Result, ?)
+				)
+				p.redirect_error_to_same_as_output
 				p.launch
 				p.wait_for_exit
 			else
@@ -232,14 +256,14 @@ feature {NONE} --Implementation
 	set_content_type (header : HTTP_HEADER; type : STRING)
 			-- set header contenty base on `type'
 		do
-			if  type ~ "pdf" then
-			        header.put_content_type ("application/pdf")
-			elseif type ~ "gif" then
-			        header.put_content_type_image_gif
-			elseif type ~ "jpg" then
-			        header.put_content_type_image_jpg
+			if type.same_string ("pdf") then
+				header.put_content_type_application_pdf
+			elseif type.same_string ("gif") then
+				header.put_content_type_image_gif
+			elseif type.same_string ("jpg") then
+				header.put_content_type_image_jpg
 			else
-			        header.put_content_type_text_plain -- default case
+				header.put_content_type_text_plain -- default case
 			end
 		end
 
