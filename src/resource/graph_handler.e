@@ -75,14 +75,14 @@ feature -- HTTP Methods
 				if attached get_graph_id_from_path (orig_path) as l_id then
 						-- retrieve a graph identidied by l_id
 					if attached retrieve_by_id (l_id.to_integer_32) as l_graph then
-						if attached json_to_cj as l_cj then
-							build_item (l_graph, l_cj)
+						if attached json_to_cj (req) as l_cj then
+							build_item (req, l_graph, l_cj)
 							if attached {JSON_VALUE} json.value (l_cj) as l_cj_answer then
 								compute_response_get (req, res, l_cj_answer.representation)
 							end
 						end
 					else
-						if attached json_to_cj as l_cj then
+						if attached json_to_cj (req) as l_cj then
 							create cj_error.make ("Resource not found", "001", "The graph id " + l_id.out + " does not exist in the system")
 							l_cj.set_error (cj_error)
 							if attached {JSON_VALUE} json.value (l_cj) as l_cj_answer then
@@ -93,11 +93,11 @@ feature -- HTTP Methods
 				else
 						-- retrieve all
 					if attached retrieve_all as graphs then
-						if attached json_to_cj as l_cj then
+						if attached json_to_cj (req) as l_cj then
 							across
 								graphs as ic
 							loop
-								build_item (ic.item, l_cj)
+								build_item (req, ic.item, l_cj)
 							end
 							if attached {JSON_VALUE} json.value (l_cj) as l_cj_answer then
 								compute_response_get (req, res, l_cj_answer.representation)
@@ -304,12 +304,12 @@ feature {NONE} -- Implementacion Repository and Graph Layer
 			end
 		end
 
-	json_to_cj: detachable CJ_COLLECTION
+	json_to_cj (req: WSF_REQUEST): detachable CJ_COLLECTION
 		local
 			parser: JSON_PARSER
 		do
 			initialize_converters (json)
-			create parser.make_parser (collection_json_graph)
+			create parser.make_parser (collection_json_graph (req))
 			if attached parser.parse as jv then
 				if attached {CJ_COLLECTION} json.object (jv, "CJ_COLLECTION") as l_col then
 					Result := l_col
@@ -319,28 +319,38 @@ feature {NONE} -- Implementacion Repository and Graph Layer
 
 feature -- Collection JSON
 
-	build_item (a_graph: GRAPH; cj: CJ_COLLECTION)
+	build_item (req: WSF_REQUEST; a_graph: GRAPH; cj: CJ_COLLECTION)
 		local
 			cj_item: CJ_ITEM
 		do
-			create cj_item.make ("http:127.0.0.1:9090/graph/" + a_graph.id.out)
+			create cj_item.make (req.absolute_script_url ("/graph/" + a_graph.id.out))
 			cj_item.add_data (new_data ("description", a_graph.description, "Description"))
 			cj_item.add_data (new_data ("content", a_graph.content, "Grahp"))
 			cj_item.add_data (new_data ("title", a_graph.title, "Title"))
-			cj_item.add_link (new_link ("http:127.0.0.1:9090/graph/" + a_graph.id.out + "/render;jpg", "Image", "Graph", "Title", "image/jpg"))
-			cj_item.add_link (new_link ("http:127.0.0.1:9090/graph/" + a_graph.id.out + "/render;pdf", "Image", "Graph", "Title", "application/pdf"))
-			cj_item.add_link (new_link ("http:127.0.0.1:9090/graph/" + a_graph.id.out + "/render;gif", "Image", "Graph", "Title", "application/gif"))
+			cj_item.add_link (new_link (req.absolute_script_url ("/graph/" + a_graph.id.out + "/render;jpg"), "Image", "Graph", "Title", "image/jpg"))
+			cj_item.add_link (new_link (req.absolute_script_url ("/graph/" + a_graph.id.out + "/render;pdf"), "Image", "Graph", "Title", "application/pdf"))
+			cj_item.add_link (new_link (req.absolute_script_url ("/graph/" + a_graph.id.out + "/render;gif"), "Image", "Graph", "Title", "application/gif"))
 			cj.add_item (cj_item)
 		end
 
-	collection_json_graph: STRING = "[
-					{
+	collection_json_graph (req: WSF_REQUEST): STRING
+		do
+			create Result.make_from_string (collection_json_graph_tpl)
+			if attached req.http_host as l_host then
+				Result.replace_substring_all ("$ROOT_URL", "http://" + l_host)
+			else
+				Result.replace_substring_all ("$ROOT_URL", "")
+			end
+		end
+
+	collection_json_graph_tpl: STRING = "[
+				{
 			   	 "collection": {
-				   	"href": "http://127.0.0.1:9090/graph",
+				   	"href": "$ROOT_URL/graph",
 			        "items": [],
 			        "links": [
 			            {
-			                "href": "http://127.0.0.1:9090/",
+			                "href": "$ROOT_URL/",
 			                "prompt": "Home Graph",
 			                "rel": "Home"
 			            }
