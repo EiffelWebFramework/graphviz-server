@@ -326,6 +326,7 @@ feature -- Collection JSON
 			cj_item.add_data (new_data ("description", a_graph.description, "Description"))
 			cj_item.add_data (new_data ("content", a_graph.content, "Graph"))
 			cj_item.add_data (new_data ("title", a_graph.title, "Title"))
+			cj_item.add_link (new_link (req.absolute_script_url (graph_id_type_uri (a_graph.id, "png")), "Image", "Graph", "Title", "image/png"))
 			cj_item.add_link (new_link (req.absolute_script_url (graph_id_type_uri (a_graph.id, "jpg")), "Image", "Graph", "Title", "image/jpg"))
 			cj_item.add_link (new_link (req.absolute_script_url (graph_id_type_uri (a_graph.id, "pdf")), "Image", "Graph", "Title", "application/pdf"))
 			cj_item.add_link (new_link (req.absolute_script_url (graph_id_type_uri (a_graph.id, "gif")), "Image", "Graph", "Title", "application/gif"))
