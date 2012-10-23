@@ -80,7 +80,7 @@ feature -- Access
 				"webp", --Image format for the Web
 				"vrml", --VRML
 				"wbmp",
-				"xdot" -- dot
+				"xdot", -- dot
 				"xlib" --Xlib canvas
 				>>
 			Result.compare_objects
