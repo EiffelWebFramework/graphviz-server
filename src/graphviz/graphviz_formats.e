@@ -8,127 +8,83 @@ note
 class
 	GRAPHVIZ_FORMATS
 
-
 feature -- Validator
 
-	is_supported (type: STRING) : BOOLEAN
+	is_supported (a_type: READABLE_STRING_8) : BOOLEAN
 		-- is `type' a valid format.
 		do
-			type.to_lower
-			graphviz_types.compare_objects
-			Result := graphviz_types.has (type)
+			Result := supported_formats.has (a_type.as_lower)
 		end
+
 feature -- Access
-	Graphviz_types : ARRAY[STRING]
+
+	set_supported_formats (lst: LIST [READABLE_STRING_8])
+		local
+			arr: ARRAY [STRING_8]
+			i: INTEGER
+		do
+			create arr.make_filled (lst.first, 1, lst.count)
+			i := arr.lower
+			i := 1
+			across
+				lst as c
+			loop
+				arr.force (c.item, i)
+				i := i + 1
+			end
+			arr.compare_objects
+			supported_formats.copy (arr)
+		end
+
+	supported_formats: ARRAY [STRING_8]
 		-- List of valid Graphviz format types
 		once
-			Result := <<bmp,canon,dot,xdot,eps,fig,gd,gd2,gif,gtk,ico,imap,
-			cmapx,imap_np,cmapx_np,jpg,jpeg,jpe,pdf,plain,plain_ext,png,
-			ps,ps2,svg,svgz,tif,tiff,vml,vmlz,wbmp,webp,xlib>>
+			Result := <<
+				"bmp", --Windows Bitmap Format
+				"canon",
+				"cmap", --	Client-side imagemap (deprecated)
+				"cmapx", --Server-side and client-side imagemaps
+				"cmapx_np", --Server-side and client-side imagemaps
+				"dot",
+				"emf",
+				"emfplus",
+				"eps", --Encapsulated PostScript
+				"fig", --FIG
+				"gd",
+				"gd2", --GD/GD2 formats
+				"gif", --GIF
+				"gtk", --GTK canvas
+				"gv",
+				"ico", --Icon Image File Format
+				"imap",
+				"imap_np",
+				"ismap", --erver-side imagemap (deprecated)
+				"jpe",
+				"jpeg",
+				"jpg",
+				"metafile",
+				"pdf", --Portable Document Format (PDF)
+				"plain",
+				"plain-ext", --Simple text format
+				"png", --Portable Network Graphics format
+				"ps", --PostScript
+				"ps2", --PostScript for PDF
+				"svg",
+				"svgz", --Scalable Vector Graphics
+				"tif",
+				"tiff", --TIFF (Tag Image File Format)
+				"tk",
+				"vml",
+				"vmlz", --Vector Markup Language (VML)
+				"wbmp", --Wireless BitMap format
+				"webp", --Image format for the Web
+				"vrml", --VRML
+				"wbmp",
+				"xdot" -- dot
+				"xlib" --Xlib canvas
+				>>
+			Result.compare_objects
 		end
-
-
-feature -- available formats
-
-	bmp: STRING = "bmp"
-			--Windows Bitmap Format
-
-	canon: STRING = "canon"
-
-	dot: STRING = "dot"
-
-	xdot: STRING = "xdot"
-			-- dot
-
-	eps: STRING = "eps"
-			--Encapsulated PostScript
-
-	fig: STRING = "fig"
-			--FIG
-
-	gd: STRING = "gd"
-
-	gd2: STRING = "gd2"
-			--GD/GD2 formats
-
-	gif: STRING = "gif"
-			--GIF
-
-	gtk: STRING = "gtk"
-			--GTK canvas
-
-	ico: STRING = "ico"
-			--Icon Image File Format
-
-	imap: STRING = "imap"
-
-	cmapx: STRING = "cmapx"
-			--Server-side and client-side imagemaps
-
-	imap_np: STRING = "imap_np"
-
-	cmapx_np: STRING = "cmapx_np"
-			--Server-side and client-side imagemaps
-
-	jpg: STRING = "jpg"
-
-	jpeg: STRING = "jpeg"
-
-	jpe: STRING = "jpe"
-
-	pdf: STRING = "pdf"
-			--Portable Document Format (PDF)
-
-	plain: STRING = "plain"
-
-	plain_ext: STRING = "plain-ext"
-			--Simple text format
-
-	png: STRING = "png"
-			--Portable Network Graphics format
-
-	ps: STRING = "ps"
-			--PostScript
-
-	ps2: STRING = "ps2"
-			--PostScript for PDF
-
-	svg: STRING = "svg"
-
-	svgz: STRING = "svgz"
-			--Scalable Vector Graphics
-
-	tif: STRING = "tif"
-
-	tiff: STRING = "tiff"
-			--TIFF (Tag Image File Format)
-
-	vml: STRING = "vml"
-
-	vmlz: STRING = "vmlz"
-			--Vector Markup Language (VML)
-
-	vrml: STRING = "vrml"
-			--VRML
-
-	wbmp: STRING = "wbmp"
-			--Wireless BitMap format
-
-	webp: STRING = "webp"
-			--Image format for the Web
-
-	xlib: STRING = "xlib"
-			--Xlib canvas
-
-feature -- deprecated
-
-	cmap: STRING = "cmap"
-			--	Client-side imagemap (deprecated)
-
-	ismap: STRING = "ismap"
-			--erver-side imagemap (deprecated)
-
-
 
 
 end

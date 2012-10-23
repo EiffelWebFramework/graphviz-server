@@ -17,6 +17,8 @@ inherit
 
 	GRAPHVIZ_SERVER_URI_TEMPLATES
 
+	PROCESS_HELPER
+
 create
 	make
 
@@ -27,6 +29,7 @@ feature {NONE} -- Initialization
 
 		do
 			initialize_router
+			initialize_graphviz
 			create {WSF_SERVICE_LAUNCHER_OPTIONS_FROM_INI} service_options.make_from_file ("server.ini")
 --			set_service_option ("port", 9090)
 			make_and_launch
@@ -71,6 +74,19 @@ feature -- Execution
 			res.set_status_code ({HTTP_STATUS_CODE}.method_not_allowed)
 			res.put_header_text (h.string)
 			res.put_string (l_description)
+		end
+
+	initialize_graphviz
+		local
+			u: GRAPHVIZ_UTILITIES
+			fmts: GRAPHVIZ_FORMATS
+		do
+			create u
+			u.set_logger (create {FILE_LOGGER}.make (io.error))
+			if attached u.supported_formats as lst and then not lst.is_empty then
+				create fmts
+				fmts.set_supported_formats (lst)
+			end
 		end
 
 note

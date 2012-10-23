@@ -31,6 +31,7 @@ inherit
 	GRAPH_MANAGER
 	GRAPHVIZ_FORMATS
 	GRAPHVIZ_SERVER_URI_TEMPLATES
+	PROCESS_HELPER
 
 feature -- execute
 
@@ -64,28 +65,29 @@ feature --HTTP Methods
 		local
 			m: STRING
 		do
-			if attached req.orig_path_info as orig_path then
-				if attached {WSF_STRING} req.path_parameter ("id") as l_id and then attached {WSF_STRING} req.path_parameter ("type") as l_type then
-					if attached retrieve_by_id (l_id.value.to_integer_32) as l_graph then
-						if is_supported (l_type.value) then
-							build_graph (l_graph, l_type.value)
-							compute_response_get (req, res, l_id.value, l_type.value)
-						else
-							m := "Format [" + l_type.value + "] is not supported. Try one of the following: "
-							across
-								Graphviz_types as c
-							loop
-								m.append (c.item)
-								m.append_character (' ')
-							end
-							handle_bad_request_response (m, req, res)
-						end
+			if
+				attached {WSF_STRING} req.path_parameter ("id") as l_id and then l_id.is_integer and then
+				attached {WSF_STRING} req.path_parameter ("type") as l_type
+			then
+				if attached retrieve_by_id (l_id.integer_value) as l_graph then
+					if is_supported (l_type.value) then
+						build_graph (l_graph, l_type.value)
+						compute_response_get (req, res, l_id.value, l_type.value)
 					else
-						handle_resource_not_found_response ("Graph not found", req, res)
+						m := "Format [" + l_type.value + "] is not supported. Try one of the following: "
+						across
+							supported_formats as c
+						loop
+							m.append (c.item)
+							m.append_character (' ')
+						end
+						handle_bad_request_response (m, req, res)
 					end
 				else
 					handle_resource_not_found_response ("Graph not found", req, res)
 				end
+			else
+				handle_resource_not_found_response ("Graph not found", req, res)
 			end
 		end
 
@@ -187,68 +189,22 @@ feature -- File Helper
 
 feature -- Graphviz utils
 
-	build_graph (a_graph: GRAPH; type: STRING)
+	build_graph (a_graph: GRAPH; a_type: STRING)
 		local
-			fn: FILE_NAME
+			fn, ofn: FILE_NAME
+			u: GRAPHVIZ_UTILITIES
 		do
 			create fn.make_from_string (document_root)
 			fn.set_file_name ("temp" + a_graph.id.out)
 			fn.add_extension ("graphviz")
 			create_file (fn.string, a_graph.content)
-			generate_graphs (fn.string, "Graph_" + a_graph.id.out, type)
-		end
 
-	last_error: INTEGER
+			create ofn.make_from_string (document_root)
+			ofn.set_file_name ("Graph_" + a_graph.id.out)
 
-	generate_graphs (content_file: STRING; name: STRING; type: STRING)
-		local
-			gcb: GRAPHVIZ_COMMAND_BUILDER
-		do
-				--create gcb.make_with_format ({GRAPHVIZ_FORMATS}.jpg,content_file,name)
-			create gcb.make_with_format (type, content_file, name)
-			log ("Graph generation%N")
-			if attached gcb.command as command then
-				if attached output_of_command (command, document_root) as s then
-					log (s + "%N")
-				else
-					log ("Nothing!!")
-				end
-			end
-			log ("End Process!!!")
-		end
-
-	output_of_command (a_cmd, a_dir: STRING): detachable STRING
-			-- Output of command `a_cmd' launched in directory `a_dir'.
-		require
-			cmd_attached: a_cmd /= Void
-			dir_attached: a_dir /= Void
-		local
-			pf: PROCESS_FACTORY
-			p: PROCESS
-			retried: BOOLEAN
-		do
-			if not retried then
-				last_error := 0
-				create Result.make (10)
-				create pf
-				p := pf.process_launcher_with_command_line (a_cmd, a_dir)
-				p.set_hidden (True)
-				p.set_separate_console (False)
-				p.redirect_input_to_stream
-				p.redirect_output_to_agent (agent  (res: STRING; s: STRING)
-					do
-						res.append_string (s)
-					end (Result, ?)
-				)
-				p.redirect_error_to_same_as_output
-				p.launch
-				p.wait_for_exit
-			else
-				last_error := 1
-			end
-		rescue
-			retried := True
-			retry
+			create u
+			u.set_logger (create {FILE_LOGGER}.make (io.error))
+			u.render_graph_into_file (fn.string, a_type, ofn.string)
 		end
 
 feature {NONE} --Implementation
