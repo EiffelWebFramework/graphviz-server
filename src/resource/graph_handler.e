@@ -287,18 +287,16 @@ feature {NONE} -- Implementacion Repository and Graph Layer
 				across
 					template.data as ic
 				loop
-					if ic.item.name ~ "title" then
+					if ic.item.name.same_string ("title") then
 						l_title := ic.item.value
-					end
-					if ic.item.name ~ "description" then
+					elseif ic.item.name.same_string ("description") then
 						l_description := ic.item.value
-					end
-					if ic.item.name ~ "content" then
+					elseif ic.item.name.same_string ("content") then
 						l_content := ic.item.value
 					end
 				end
-				if attached l_content as lc then
-					create Result.make (lc, l_title, l_description)
+				if l_content /= Void then
+					create Result.make (l_content, l_title, l_description)
 				end
 			end
 		end
@@ -401,6 +399,9 @@ feature -- URI Utils
 			l_list := a_path.split ('/')
 			if l_list.valid_index (3) then
 				Result := l_list.at (3)
+			end
+			if Result /= Void and then Result.is_empty then
+				Result := Void
 			end
 		end
 

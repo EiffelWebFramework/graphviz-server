@@ -109,7 +109,7 @@ feature --HTTP Methods
 				l_msg := f.last_string
 
 				create h.make
-				set_content_type (h,type)
+				set_content_type (h, type)
 				h.put_content_length (l_msg.count)
 				if attached req.request_time as time then
 					h.put_utc_date (time)
@@ -212,7 +212,11 @@ feature {NONE} --Implementation
 	set_content_type (header : HTTP_HEADER; type : STRING)
 			-- set header contenty base on `type'
 		do
-			if type.same_string ("pdf") then
+			if type.same_string ("png") then
+				header.put_content_type_image_png
+			elseif type.same_string ("svg") then
+				header.put_content_type_image_svg_xml
+			elseif type.same_string ("pdf") then
 				header.put_content_type_application_pdf
 			elseif type.same_string ("gif") then
 				header.put_content_type_image_gif
