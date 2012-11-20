@@ -72,21 +72,23 @@ feature -- HTTP Methods
 				--| in this case retrive the graph with the given id.
 				--| Maybe the first case need to be refactored and removed to a new
 				--| handler possibly the SEARCH_HANLDER.
+			initialize_converters (json)
+
 			if attached req.orig_path_info as orig_path then
 				if attached get_graph_id_from_path (orig_path) as l_id then
 						-- retrieve a graph identidied by l_id
 					if attached retrieve_by_id (l_id.to_integer_32) as l_graph then
-						if attached json_to_cj (req) as l_cj then
+						if attached collection_json_graph (req, l_graph) as l_cj then
 							build_item (req, l_graph, l_cj)
-							if attached {JSON_VALUE} json.value (l_cj) as l_cj_answer then
+							if attached json.value (l_cj) as l_cj_answer then
 								compute_response_get (req, res, l_cj_answer.representation)
 							end
 						end
 					else
-						if attached json_to_cj (req) as l_cj then
+						if attached collection_json_graph (req, Void) as l_cj then
 							create cj_error.make ("Resource not found", "001", "The graph id " + l_id.out + " does not exist in the system")
 							l_cj.set_error (cj_error)
-							if attached {JSON_VALUE} json.value (l_cj) as l_cj_answer then
+							if attached json.value (l_cj) as l_cj_answer then
 								handle_resource_not_found_response (l_cj_answer.representation, req, res)
 							end
 						end
@@ -94,13 +96,13 @@ feature -- HTTP Methods
 				else
 						-- retrieve all
 					if attached retrieve_all as graphs then
-						if attached json_to_cj (req) as l_cj then
+						if attached collection_json_graph (req, Void) as l_cj then
 							across
 								graphs as ic
 							loop
 								build_item (req, ic.item, l_cj)
 							end
-							if attached {JSON_VALUE} json.value (l_cj) as l_cj_answer then
+							if attached json.value (l_cj) as l_cj_answer then
 								compute_response_get (req, res, l_cj_answer.representation)
 							end
 						end
@@ -301,19 +303,6 @@ feature {NONE} -- Implementacion Repository and Graph Layer
 			end
 		end
 
-	json_to_cj (req: WSF_REQUEST): detachable CJ_COLLECTION
-		local
-			parser: JSON_PARSER
-		do
-			initialize_converters (json)
-			create parser.make_parser (collection_json_graph (req))
-			if attached parser.parse as jv then
-				if attached {CJ_COLLECTION} json.object (jv, "CJ_COLLECTION") as l_col then
-					Result := l_col
-				end
-			end
-		end
-
 feature -- Collection JSON
 
 	build_item (req: WSF_REQUEST; a_graph: GRAPH; cj: CJ_COLLECTION)
@@ -331,38 +320,70 @@ feature -- Collection JSON
 			cj.add_item (cj_item)
 		end
 
-	collection_json_graph (req: WSF_REQUEST): STRING
+	collection_json_graph (req: WSF_REQUEST; g: detachable GRAPH): CJ_COLLECTION
+			--	"[
+			--			{
+			--		   	 "collection": {
+			--			   	"href": "$GRAPH_URL",
+			--		        "items": [],
+			--		        "links": [
+			--		            {
+			--		                "href": "$HOME_URL",
+			--		                "prompt": "Home Graph",
+			--		                "rel": "Home"
+			--		            }
+			--		        ],
+			--		        "queries": [],
+			--		        "template":{
+			--		    		   "data" :
+			--		       				 [
+			--		        			{"name" : "title", "value" : "","prompt" :"Title"},
+			--		        			{"name" : "content", "value" : "", "prompt" : "Graphviz Code"},
+			--		        			{"name" : "description", "value" : "", "prompt" : "Description"}
+			--		        	 ]
+			--		   			},
+			--		        "version": "1.0"
+			--		    	}
+			--			}
+			--	]"
+		local
+			col: CJ_COLLECTION
+			lnk: CJ_LINK
+			tpl: CJ_TEMPLATE
+			d: CJ_DATA
 		do
-			create Result.make_from_string (collection_json_graph_tpl)
-			Result.replace_substring_all ("$GRAPH_URL", req.absolute_script_url (graph_uri))
-			Result.replace_substring_all ("$HOME_URL", req.absolute_script_url (home_uri))
+			create col.make_with_href (req.absolute_script_url (graph_uri))
+
+			-- Links
+			create lnk.make (req.absolute_script_url (home_uri), "Home")
+			lnk.set_prompt ("Home Graph")
+			col.add_link (lnk)
+
+
+			-- Template
+			create tpl.make
+			create d.make_with_name ("title"); d.set_prompt ("Title")
+			if g /= Void then
+				d.set_value (g.title)
+			end
+			tpl.add_data (d)
+
+			create d.make_with_name ("content"); d.set_prompt ("Graphviz Code")
+			if g /= Void then
+				d.set_value (g.content)
+			end
+			tpl.add_data (d)
+
+			create d.make_with_name ("description"); d.set_prompt ("Description")
+			if g /= Void then
+				d.set_value (g.description)
+			end
+			tpl.add_data (d)
+			col.set_template (tpl)
+
+			Result := col
 		end
 
-	collection_json_graph_tpl: STRING = "[
-				{
-			   	 "collection": {
-				   	"href": "$GRAPH_URL",
-			        "items": [],
-			        "links": [
-			            {
-			                "href": "$HOME_URL",
-			                "prompt": "Home Graph",
-			                "rel": "Home"
-			            }
-			        ],
-			        "queries": [],
-			        "template":{
-			    		   "data" :
-			       				 [
-			        			{"name" : "title", "value" : "","prompt" :"Title"},
-			        			{"name" : "content", "value" : "", "prompt" : "Graphviz Code"},
-			        			{"name" : "description", "value" : "", "prompt" : "Description"}
-			        	 ]
-			   			},
-			        "version": "1.0"
-			    	}
-				}
-		]"
 
 	new_data (name: STRING_32; value: detachable STRING_32; prompt: STRING_32): CJ_DATA
 		do
