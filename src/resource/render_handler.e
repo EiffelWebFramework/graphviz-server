@@ -109,7 +109,7 @@ feature --HTTP Methods
 				l_msg := f.last_string
 
 				create h.make
-				set_content_type (h,type)
+				set_content_type (h, type)
 				h.put_content_length (l_msg.count)
 				if attached req.request_time as time then
 					h.put_utc_date (time)
@@ -212,17 +212,29 @@ feature {NONE} --Implementation
 	set_content_type (header : HTTP_HEADER; type : STRING)
 			-- set header contenty base on `type'
 		do
-			if type.same_string ("pdf") then
-				header.put_content_type_application_pdf
-			elseif type.same_string ("gif") then
-				header.put_content_type_image_gif
-			elseif type.same_string ("jpg") then
-				header.put_content_type_image_jpg
+			if attached mime_mapping.mime_type (type) as l_content_type then
+				header.put_content_type (l_content_type)
 			else
-				header.put_content_type_text_plain -- default case
+				if type.same_string ("png") then
+					header.put_content_type_image_png
+				elseif type.same_string ("svg") then
+					header.put_content_type_image_svg_xml
+				elseif type.same_string ("pdf") then
+					header.put_content_type_application_pdf
+				elseif type.same_string ("gif") then
+					header.put_content_type_image_gif
+				elseif type.same_string ("jpg") then
+					header.put_content_type_image_jpg
+				else
+					header.put_content_type_text_plain -- default case
+				end
 			end
 		end
 
+	mime_mapping: HTTP_FILE_EXTENSION_MIME_MAPPING
+		once
+			create Result.make_default
+		end
 note
 	copyright: "2011-2012, Javier Velilla and others"
 	license: "Eiffel Forum License v2 (see http://www.eiffel.com/licensing/forum.txt)"

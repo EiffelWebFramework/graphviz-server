@@ -37,40 +37,41 @@ feature {NONE} -- Initialization
 
 	output_of_command (a_cmd, a_dir: STRING): detachable STRING
 		-- Output of command `a_cmd' launched in directory `a_dir'.
-	require
-		cmd_attached: a_cmd /= Void
-		dir_attached: a_dir /= Void
-	local
-		pf: PROCESS_FACTORY
-		p: PROCESS
-		retried: BOOLEAN
-	do
-		if not retried then
-			last_error := 0
-			create Result.make (10)
-			create pf
-			p := pf.process_launcher_with_command_line (a_cmd, a_dir)
-			p.set_hidden (True)
-			p.set_separate_console (False)
-			p.redirect_input_to_stream
-			p.redirect_output_to_agent (agent (res: STRING; s: STRING)
-				do
-					if s /= Void then
-						res.append_string (s)
-					end
-				end (Result, ?)
-				)
-			p.launch
-			p.wait_for_exit
-		else
-			last_error := 1
+		require
+			cmd_attached: a_cmd /= Void
+			dir_attached: a_dir /= Void
+		local
+			pf: PROCESS_FACTORY
+			p: PROCESS
+			retried: BOOLEAN
+		do
+			if not retried then
+				last_error := 0
+				create Result.make (10)
+				create pf
+				p := pf.process_launcher_with_command_line (a_cmd, a_dir)
+				p.set_hidden (True)
+				p.set_separate_console (False)
+				p.redirect_input_to_stream
+				p.redirect_output_to_agent (agent (res: STRING; s: STRING)
+					do
+						if s /= Void then
+							res.append_string (s)
+						end
+					end (Result, ?)
+					)
+				p.launch
+				p.wait_for_exit
+			else
+				last_error := 1
+			end
+		rescue
+			retried := True
+			retry
 		end
-	rescue
-		retried := True
-		retry
-	end
 
 
-	feature -- resources
-		directory : STRING = "c:\tmp"
+feature -- resources
+	directory : STRING = "c:\tmp"
+
 end
