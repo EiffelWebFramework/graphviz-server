@@ -13,6 +13,8 @@ inherit
 		rename
 			execute as uri_execute,
 			new_mapping as new_uri_mapping
+		select
+			default_create
 		end
 
 	WSF_URI_TEMPLATE_HANDLER
@@ -29,10 +31,20 @@ inherit
 		end
 
 	GRAPH_MANAGER
+		rename
+			default_create as grm_default_create
+		end
 	GRAPHVIZ_FORMATS
 	GRAPHVIZ_SERVER_URI_TEMPLATES
 	PROCESS_HELPER
+create
+	make
 
+feature -- Initialization
+	make
+		do
+			grm_default_create
+		end
 feature -- execute
 
 	uri_execute (req: WSF_REQUEST; res: WSF_RESPONSE)
@@ -66,13 +78,14 @@ feature --HTTP Methods
 			m: STRING
 		do
 			if
-				attached {WSF_STRING} req.path_parameter ("id") as l_id and then l_id.is_integer and then
+				attached {WSF_STRING} req.path_parameter ("uid") as l_id and then l_id.is_integer and then
+				attached {WSF_STRING} req.path_parameter ("gid") as g_id and then g_id.is_integer and then
 				attached {WSF_STRING} req.path_parameter ("type") as l_type
 			then
-				if attached retrieve_by_id (l_id.integer_value) as l_graph then
+				if attached retrieve_by_id_and_user_id (g_id.integer_value, l_id.integer_value) as l_graph then
 					if is_supported (l_type.value) then
-						build_graph (l_graph, l_type.value)
-						compute_response_get (req, res, l_id.value, l_type.value)
+						build_graph (l_graph,l_id.integer_value, l_type.value)
+						compute_response_get (req, res, l_id.value, g_id.value, l_type.value)
 					else
 						m := "Format [" + l_type.value + "] is not supported. Try one of the following: "
 						across
@@ -86,12 +99,31 @@ feature --HTTP Methods
 				else
 					handle_resource_not_found_response ("Graph not found", req, res)
 				end
+			elseif  attached {WSF_STRING} req.path_parameter ("id") as l_id and then l_id.is_integer and then
+					attached {WSF_STRING} req.path_parameter ("type") as l_type then
+					if attached retrieve_by_id (l_id.integer_value) as l_graph then
+						if is_supported (l_type.value) then
+							build_graph (l_graph,0, l_type.value)
+							compute_response_get (req, res, "0", l_id.value, l_type.value)
+						else
+							m := "Format [" + l_type.value + "] is not supported. Try one of the following: "
+							across
+								supported_formats as c
+							loop
+								m.append (c.item)
+								m.append_character (' ')
+							end
+							handle_bad_request_response (m, req, res)
+						end
+					else
+						handle_resource_not_found_response ("Graph not found", req, res)
+					end
 			else
 				handle_resource_not_found_response ("Graph not found", req, res)
 			end
 		end
 
-	compute_response_get (req: WSF_REQUEST; res: WSF_RESPONSE; id: STRING_32; type: STRING_32)
+	compute_response_get (req: WSF_REQUEST; res: WSF_RESPONSE; uid: STRING_32; gid: STRING_32; type: STRING_32)
 		local
 			h: HTTP_HEADER
 			l_msg: STRING
@@ -100,7 +132,7 @@ feature --HTTP Methods
 		do
 			l_msg := ""
 			create fn.make_from_string (document_root)
-			fn.set_file_name ("Graph_" + id + "." + type)
+			fn.set_file_name ("Graph_" + uid +"_"+ gid + "." + type)
 			create f.make (fn.string)
 			if f.exists and then f.is_access_readable then
 				f.open_read
@@ -118,7 +150,7 @@ feature --HTTP Methods
 				res.put_header_text (h.string)
 				res.put_string (l_msg)
 			else
-				handle_internal_server_error ("Unable to generate output %""+ type +"%" for graph %""+ id.out +"%".", req, res)
+				handle_internal_server_error ("Unable to generate output %""+ type +"%" for graph %""+ gid.out +"%".", req, res)
 			end
 		end
 
@@ -189,18 +221,18 @@ feature -- File Helper
 
 feature -- Graphviz utils
 
-	build_graph (a_graph: GRAPH; a_type: STRING)
+	build_graph (a_graph: GRAPH; user_id :INTEGER; a_type: STRING)
 		local
 			fn, ofn: FILE_NAME
 			u: GRAPHVIZ_UTILITIES
 		do
 			create fn.make_from_string (document_root)
-			fn.set_file_name ("temp" + a_graph.id.out)
+			fn.set_file_name ("temp_"+user_id.out +"_" + a_graph.id.out )
 			fn.add_extension ("graphviz")
 			create_file (fn.string, a_graph.content)
 
 			create ofn.make_from_string (document_root)
-			ofn.set_file_name ("Graph_" + a_graph.id.out)
+			ofn.set_file_name ("Graph_"+user_id.out +"_" + a_graph.id.out)
 
 			create u
 			u.set_logger (create {FILE_LOGGER}.make (io.error))

@@ -12,6 +12,8 @@ inherit
 		rename
 			execute as uri_execute,
 			new_mapping as new_uri_mapping
+		select
+			default_create
 		end
 
 	WSF_URI_TEMPLATE_HANDLER
@@ -24,10 +26,7 @@ inherit
 
 	WSF_RESOURCE_HANDLER_HELPER
 		redefine
-			do_get,
-			do_post,
-			do_put,
-			do_delete
+			do_get
 		end
 
 	SHARED_EJSON
@@ -35,9 +34,18 @@ inherit
 	GRAPHVIZ_SERVER_URI_TEMPLATES
 
 	GRAPH_MANAGER
+		rename
+			default_create as grm_default_create
+		end
 
 	REFACTORING_HELPER
-
+create
+	make
+feature -- Initialization
+	make
+		do
+			grm_default_create
+		end
 feature -- execute
 
 	uri_execute (req: WSF_REQUEST; res: WSF_RESPONSE)
@@ -75,9 +83,9 @@ feature -- HTTP Methods
 			initialize_converters (json)
 
 			if attached req.orig_path_info as orig_path then
-				if attached get_graph_id_from_path (orig_path) as l_id then
+				if attached {WSF_STRING} req.path_parameter ("id") as l_id and then l_id.is_integer  then
 						-- retrieve a graph identidied by l_id
-					if attached retrieve_by_id (l_id.to_integer_32) as l_graph then
+					if attached retrieve_by_id (l_id.integer_value) as l_graph then
 						if attached collection_json_graph (req, l_graph) as l_cj then
 							build_item (req, l_graph, l_cj)
 							if attached json.value (l_cj) as l_cj_answer then
@@ -128,124 +136,6 @@ feature -- HTTP Methods
 			res.put_string (l_msg)
 		end
 
-	do_post (req: WSF_REQUEST; res: WSF_RESPONSE)
-			-- Here the convention is the following.
-			-- POST is used for creation and the server determines the URI
-			-- of the created resource.
-			-- If the request post is SUCCESS, the server will create the graph and will response with
-			-- HTTP_RESPONSE 201 CREATED, the Location header will contains the newly created graph's URI
-			-- if the request post is not SUCCESS, the server will response with
-			-- HTTP_RESPONSE 400 BAD REQUEST, the client send a bad request
-			-- HTTP_RESPONSE 500 INTERNAL_SERVER_ERROR, when the server can deliver the request
-		local
-			l_post: STRING
-		do
-			l_post := retrieve_data (req)
-			if attached extract_cj_request (l_post) as l_graph then
-					-- save graph
-					-- return the location uri of the graph and return a 201
-					--| Here maybe we need to verify if the save action in
-					--| was succesful or not, if not was successfull, we need to
-					--| send a 50x error.
-				insert (l_graph)
-				l_graph.set_id (last_row_id.to_integer_32)
-				compute_response_post (req, res, l_graph)
-			else
-				handle_bad_request_response (l_post + "%N is not a valid Graph", req, res)
-			end
-		end
-
-	compute_response_post (req: WSF_REQUEST; res: WSF_RESPONSE; a_graph: GRAPH)
-		local
-			h: HTTP_HEADER
-			l_location: STRING
-		do
-				--| Here we send a response with status code 201 and the uri of
-				--| the new resource.
-				--| Other option is send a 201 and a redirect to http://127.0.0.1:9090/graph
-				--| the problem here is that redirect action rewrite the location, I'm not
-				--| sure if that behavior is ok.
-			create h.make
-			h.put_content_type ("application/vnd.collection+json")
-			l_location := req.absolute_script_url (graph_id_uri (a_graph.id))
-			h.put_location (l_location)
-			if attached req.request_time as time then
-				h.put_utc_date (time)
-			end
-			res.set_status_code ({HTTP_STATUS_CODE}.created)
-			res.put_header_text (h.string)
-		end
-
-	do_delete (req: WSF_REQUEST; res: WSF_RESPONSE)
-			-- Here we use DELETE to cancel a graph description.
-			-- 200 if is ok
-			-- 404 Resource not found
-			-- 500 if we have an internal server error
-		do
-			if attached req.orig_path_info as orig_path then
-				if attached {WSF_STRING} req.path_parameter ("id") as l_id then
-					delete_by_id (l_id.value.to_integer_32)
-					compute_response_delete (req, res)
-				else
-					handle_resource_not_found_response (orig_path + " not found in this server", req, res)
-				end
-			end
-		end
-
-	compute_response_delete (req: WSF_REQUEST; res: WSF_RESPONSE)
-		local
-			h: HTTP_HEADER
-		do
-			create h.make
-			h.put_content_type ("application/vnd.collection+json")
-			if attached req.request_time as time then
-				h.put_utc_date (time)
-			end
-			res.set_status_code ({HTTP_STATUS_CODE}.no_content)
-			res.put_header_text (h.string)
-		end
-
-	do_put (req: WSF_REQUEST; res: WSF_RESPONSE)
-			-- Updating a resource with PUT
-			-- A successful PUT request will not create a new resource, instead it will
-			-- change the state of the resource identified by the current uri.
-			-- If success we response with 200.
-			-- 404 if the graph is not found
-			-- 400 in case of a bad request
-			-- 500 internal server error
-		local
-			l_put: STRING
-		do
-			l_put := retrieve_data (req)
-			if attached req.orig_path_info as orig_path then
-				if attached {WSF_STRING} req.path_parameter ("id") as l_id then
-					if attached extract_cj_request (l_put) as lreq_graph and then attached retrieve_by_id (l_id.value.to_integer_32) as ldb_graph then
-						ldb_graph.set_description (lreq_graph.description)
-						ldb_graph.set_title (lreq_graph.title)
-						ldb_graph.set_content (lreq_graph.content)
-						update (ldb_graph)
-						compute_response_put (req, res)
-					else
-						handle_resource_not_found_response ("The resource " + l_id.value + " was not found ", req, res)
-					end
-				end
-			end
-		end
-
-	compute_response_put (req: WSF_REQUEST; res: WSF_RESPONSE)
-		local
-			h: HTTP_HEADER
-		do
-				--| Here we send a response with status code 200,
-				--| Maybe we also can send a redirect to the resource.
-			create h.make
-			h.put_content_type ("application/vnd.collection+json")
-			if attached req.request_time as time then
-				h.put_utc_date (time)
-			end
-			res.set_status_code ({HTTP_STATUS_CODE}.ok)
-			res.put_header_text (h.string)
-		end
 
 feature {NONE} -- Implementacion Repository and Graph Layer
 
@@ -411,20 +301,6 @@ feature -- Collection JSON
 			end
 		end
 
-feature -- URI Utils
-
-	get_graph_id_from_path (a_path: READABLE_STRING_32): detachable STRING
-		local
-			l_list: LIST [READABLE_STRING_32]
-		do
-			l_list := a_path.split ('/')
-			if l_list.valid_index (3) then
-				Result := l_list.at (3)
-			end
-			if Result /= Void and then Result.is_empty then
-				Result := Void
-			end
-		end
 
 note
 	copyright: "2011-2012, Javier Velilla and others"

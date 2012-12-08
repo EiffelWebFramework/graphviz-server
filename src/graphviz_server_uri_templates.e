@@ -14,6 +14,12 @@ feature -- Access: collection
 
 	user_uri: STRING = "/user"
 
+	user_register_uri: STRING = "/user/register"
+
+	user_login_uri: STRING = "/user/login"
+
+
+
 feature -- Access: graph	
 
 	graph_id_type_uri_template: URI_TEMPLATE
@@ -44,5 +50,75 @@ feature -- Access: graph
 			ht.force (a_id, "id")
 			Result := graph_id_uri_template.expanded_string (ht)
 		end
+
+
+feature -- Access: user	
+
+	user_id_uri_template: URI_TEMPLATE
+		once
+			create Result.make (user_uri + "/{id}")
+		end
+
+	user_id_uri (a_id: like {USER}.id): STRING_8
+		local
+			ht: HASH_TABLE [detachable ANY, STRING_8]
+		do
+			create ht.make (1)
+			ht.force (a_id, "id")
+			Result := user_id_uri_template.expanded_string (ht)
+		end
+
+
+
+feature -- Access: user_graphs
+
+	user_graph_uri: URI_TEMPLATE
+		once
+			create Result.make (user_uri + "/{uid}/graph")
+		end
+
+
+	user_graph_id_type_uri_template: URI_TEMPLATE
+		once
+			create Result.make (user_graph_uri.template + "/{gid}.{type}")
+		end
+
+	user_id_graph_uri (u_id: like {USER}.id): STRING
+		local
+			ht: HASH_TABLE [detachable ANY, STRING_8]
+		do
+			create ht.make (1)
+			ht.force (u_id, "uid")
+			Result := user_graph_uri.expanded_string (ht)
+		end
+
+
+	user_graph_id_uri_template: URI_TEMPLATE
+		once
+			create Result.make (user_graph_uri.template + "/{gid}")
+		end
+
+	user_graph_id_uri (u_id: like {USER}.id;g_id: like {GRAPH}.id): STRING_8
+		local
+			ht: HASH_TABLE [detachable ANY, STRING_8]
+		do
+			create ht.make (2)
+			ht.force (u_id, "uid")
+			ht.force (g_id, "gid")
+			Result := user_graph_id_uri_template.expanded_string (ht)
+		end
+
+
+	user_graph_id_type_uri (u_id: like {USER}.id; g_id: like {GRAPH}.id; a_type: READABLE_STRING_GENERAL): STRING_8
+		local
+			ht: HASH_TABLE [detachable ANY, STRING_8]
+		do
+			create ht.make (3)
+			ht.force (u_id, "uid")
+			ht.force (g_id, "gid")
+			ht.force (a_type, "type")
+			Result := user_graph_id_type_uri_template.expanded_string (ht)
+		end
+
 
 end

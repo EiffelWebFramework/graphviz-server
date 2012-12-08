@@ -41,7 +41,7 @@ feature -- db Manager
 
 			-- Create a new table users
 			if not has_users_table then
-				create l_modify.make ("CREATE TABLE IF NOT EXISTS USERS(user_id INTEGER NOT NULL PRIMARY KEY, user_name TEXT, password TEXT);", Result)
+				create l_modify.make ("CREATE TABLE IF NOT EXISTS USERS(user_id INTEGER NOT NULL PRIMARY KEY, user_name TEXT UNIQUE, password TEXT);", Result)
 				l_modify.execute
 				if l_modify.changes_count > 0 then
 					print ("USERS Table created.%N")
@@ -84,7 +84,7 @@ feature -- {EQA_TEST_SET}
 
 
 			-- Create a new table users
-			create l_modify.make ("CREATE TABLE USERS(user_id INTEGER NOT NULL PRIMARY KEY, user_name TEXT, password TEXT);", Result)
+			create l_modify.make ("CREATE TABLE USERS(user_id INTEGER NOT NULL PRIMARY KEY, user_name TEXT UNIQUE, password TEXT);", Result)
 			l_modify.execute
 			if l_modify.changes_count > 0 then
 				print ("USERS Table created.%N")

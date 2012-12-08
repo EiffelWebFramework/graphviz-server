@@ -9,7 +9,8 @@ class
 
 feature -- Access	
 
-	output_of_command (a_cmd: READABLE_STRING_8; a_dir: detachable READABLE_STRING_GENERAL): detachable STRING
+	--output_of_command (a_cmd: READABLE_STRING_8; a_dir: detachable READABLE_STRING_GENERAL): detachable STRING
+	output_of_command (a_cmd: READABLE_STRING_8; a_dir: detachable STRING): detachable STRING
 			-- Output of command `a_cmd' launched in directory `a_dir'.
 		require
 			cmd_attached: a_cmd /= Void
