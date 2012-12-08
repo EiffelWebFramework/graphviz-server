@@ -1,5 +1,5 @@
 note
-	description: "REST Buck server"
+	description: "Graphviz server"
 	date: "$Date$"
 	revision: "$Revision$"
 
@@ -7,6 +7,7 @@ class
 	GRAPHVIZ_SERVER
 
 inherit
+
 	ANY
 
 	WSF_FILTERED_SERVICE
@@ -26,7 +27,6 @@ feature {NONE} -- Initialization
 
 	make
 		local
-
 		do
 			initialize_filter
 			initialize_graphviz
@@ -40,11 +40,11 @@ feature {NONE} -- Initialization
 			router: WSF_ROUTER
 			render_handler: RENDER_HANDLER
 			root_handler: ROOT_HANDLER
-			graph_handler : GRAPH_HANDLER
-			user_register_handler : USER_REGISTER_HANDLER
-			user_login_handler : USER_LOGIN_HANDLER
-			user_graph_handler : USER_GRAPH_HANDLER
-			user_handler : USER_HANDLER
+			graph_handler: GRAPH_HANDLER
+			user_register_handler: USER_REGISTER_HANDLER
+			user_login_handler: USER_LOGIN_HANDLER
+			user_graph_handler: USER_GRAPH_HANDLER
+			user_handler: USER_HANDLER
 			user_login_authentication_filter: AUTHENTICATION_FILTER
 			user_authentication_filter: AUTHENTICATION_FILTER
 			user_graph_authentication_filter: AUTHENTICATION_FILTER
@@ -59,75 +59,67 @@ feature {NONE} -- Initialization
 			create user_handler.make
 			create graph_handler.make
 
-
-			-- user login authentication filter			
+				-- user login authentication filter
 			create user_login_authentication_filter
-			user_login_authentication_filter.set_next(user_login_handler)
+			user_login_authentication_filter.set_next (user_login_handler)
 
-			-- user authentication filter			
+				-- user authentication filter
 			create user_authentication_filter
-			user_authentication_filter.set_next(user_handler)
+			user_authentication_filter.set_next (user_handler)
 
-			-- user graph authentication filter			
+				-- user graph authentication filter
 			create user_graph_authentication_filter
-			user_graph_authentication_filter.set_next(user_graph_handler)
-
+			user_graph_authentication_filter.set_next (user_graph_handler)
 
 				-- the uri templates that we have here are opaque, only for API developer.
 				-- the client should don't take care of it
 
-			-- root
+				-- root
 			router.map_with_request_methods (create {WSF_URI_MAPPING}.make ("/", root_handler), router.methods_GET)
 
-			-- register a user
+				-- register a user
 			router.map_with_request_methods (create {WSF_URI_MAPPING}.make_trailing_slash_ignored (user_register_uri, user_register_handler), router.methods_GET_POST)
 
-			-- login a user
+				-- login a user
 			router.handle_with_request_methods (user_login_uri, user_login_authentication_filter, router.methods_GET_POST)
 
+				--| Weird behavior the order of handler affect the selection
+				--|/graph/{id} should be handled by graph
+				--|/graph/{id}.{type} should be handled by render
+				--| but if we put first the graph handler the last uri template also will be handled by graph handler.
 
-			--| Weird behavior the order of handler affect the selection
-			--|/graph/{id} should be handled by graph
-			--|/graph/{id}.{type} should be handled by render
-			--| but if we put first the graph handler the last uri template also will be handled by graph handler.
+				--graph
+				--			router.map_with_request_methods (create {WSF_URI_MAPPING}.make_trailing_slash_ignored (graph_uri, graph_handler), router.methods_GET)
+				--			router.map_with_request_methods (create {WSF_URI_TEMPLATE_MAPPING}.make_from_template (graph_id_uri_template, graph_handler), router.methods_GET)
 
-			--graph
---			router.map_with_request_methods (create {WSF_URI_MAPPING}.make_trailing_slash_ignored (graph_uri, graph_handler), router.methods_GET)
---			router.map_with_request_methods (create {WSF_URI_TEMPLATE_MAPPING}.make_from_template (graph_id_uri_template, graph_handler), router.methods_GET)
-
-			--render handler
+				--render handler
 			router.map_with_request_methods (create {WSF_URI_TEMPLATE_MAPPING}.make_from_template (graph_id_type_uri_template, render_handler), router.methods_GET)
 			router.map_with_request_methods (create {WSF_URI_TEMPLATE_MAPPING}.make_from_template (user_graph_id_type_uri_template, render_handler), router.methods_GET)
 
-
-			--graph
+				--graph
 			router.map_with_request_methods (create {WSF_URI_MAPPING}.make_trailing_slash_ignored (graph_uri, graph_handler), router.methods_GET)
 			router.map_with_request_methods (create {WSF_URI_TEMPLATE_MAPPING}.make_from_template (graph_id_uri_template, graph_handler), router.methods_GET)
 
-
-			--user
+				--user
 			router.handle_with_request_methods (user_id_uri_template.template, user_authentication_filter, router.methods_GET)
 
-
-
-
-			-- user_graph handler
+				-- user_graph handler
 			router.handle_with_request_methods (user_graph_uri.template, user_graph_authentication_filter, router.methods_GET_POST)
 			router.handle_with_request_methods (user_graph_id_uri_template.template, user_graph_authentication_filter, router.methods_GET_PUT_DELETE)
-
 			create l_routing_filter.make (router)
 			l_routing_filter.set_execute_default_action (agent execute_default)
 			filter := l_routing_filter
 		end
 
 	setup_filter
-				-- Setup `filter'
-			local
-				l_logging_filter: WSF_LOGGING_FILTER
-			do
-				create l_logging_filter
-				filter.set_next (l_logging_filter)
-			end
+			-- Setup `filter'
+		local
+			l_logging_filter: WSF_LOGGING_FILTER
+		do
+			create l_logging_filter
+			filter.set_next (l_logging_filter)
+		end
+
 feature -- Execution
 
 	execute (req: WSF_REQUEST; res: WSF_RESPONSE)

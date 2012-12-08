@@ -1,0 +1,13 @@
+-- USERS GRAPHS is modeled as one to many
+
+CREATE TABLE IF NOT EXISTS USERS(
+	user_id INTEGER NOT NULL PRIMARY KEY, 
+	user_name TEXT, 
+	password TEXT)
+
+CREATE TABLE IF NOT EXISTS GRAPHS(
+	graph_id INTEGER NOT NULL PRIMARY KEY, 
+	description TEXT, 
+	title VARCHAR(30),
+	content TEXT,
+	user_id INTEGER NOT NULL REFERENCES USERS)

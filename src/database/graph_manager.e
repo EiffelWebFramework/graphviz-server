@@ -6,11 +6,14 @@ note
 
 class
 	GRAPH_MANAGER
+
 inherit
+
 	ABSTRACT_MANAGER
 		rename
 			default_create as am_default_create
 		end
+
 	SHARED_DATABASE_MANAGER
 		rename
 			default_create as sdm_default_create
@@ -18,13 +21,12 @@ inherit
 			sdm_default_create
 		end
 
-
 feature -- Initialization
+
 	default_create
 		do
-			set_up_db_mgr(db)
+			set_up_db_mgr (db)
 		end
-
 
 feature -- Access
 
@@ -99,9 +101,7 @@ feature -- Query
 			Result := last_retrieve_all_result
 		end
 
-
-
-	retrieve_by_id_and_user_id (an_id: INTEGER; user_id : INTEGER): detachable GRAPH
+	retrieve_by_id_and_user_id (an_id: INTEGER; user_id: INTEGER): detachable GRAPH
 			-- retrive graph by id from db
 		local
 			l_query: SQLITE_QUERY_STATEMENT
@@ -130,11 +130,11 @@ feature -- Query
 					create l_graph.make (ia_row.string_value (4).to_string_32, l_title, l_descr)
 					l_graph.set_id (ia_row.integer_value (1))
 					last_retrieve_by_id_result := l_graph
-				end, [create {SQLITE_INTEGER_ARG}.make (":ID", an_id),create {SQLITE_INTEGER_ARG}.make (":USER_ID", user_id)])
+				end, [create {SQLITE_INTEGER_ARG}.make (":ID", an_id), create {SQLITE_INTEGER_ARG}.make (":USER_ID", user_id)])
 			Result := last_retrieve_by_id_result
 		end
 
-	retrieve_all_by_user_id (user_id:INTEGER): detachable LIST [GRAPH]
+	retrieve_all_by_user_id (user_id: INTEGER): detachable LIST [GRAPH]
 			-- retrive all graphs from db by user_id
 		local
 			l_query: SQLITE_QUERY_STATEMENT
@@ -195,14 +195,14 @@ feature -- Update
 			else
 				create {SQLITE_NULL_ARG} l_title_arg.make (":TITLE")
 			end
-			l_update.execute_with_arguments ([l_descr_arg, l_title_arg, create {SQLITE_STRING_ARG}.make (":CONTENT", a_graph.content), create {SQLITE_INTEGER_ARG}.make (":ID", a_graph.id),create {SQLITE_INTEGER_ARG}.make (":USER_ID", user_id)])
+			l_update.execute_with_arguments ([l_descr_arg, l_title_arg, create {SQLITE_STRING_ARG}.make (":CONTENT", a_graph.content), create {SQLITE_INTEGER_ARG}.make (":ID", a_graph.id), create {SQLITE_INTEGER_ARG}.make (":USER_ID", user_id)])
 				-- Commit changes
 			db_mgr.commit
 		end
 
 feature -- Insert
 
-	insert (a_graph: GRAPH; user_id : INTEGER)
+	insert (a_graph: GRAPH; user_id: INTEGER)
 			-- insert a new graph `a_graph' for the user user_id
 		local
 			l_insert: SQLITE_INSERT_STATEMENT
@@ -227,18 +227,16 @@ feature -- Insert
 			else
 				create {SQLITE_NULL_ARG} l_title_arg.make (":TITLE")
 			end
-
-			l_insert.execute_with_arguments ([l_descr_arg, l_title_arg, create {SQLITE_STRING_ARG}.make (":CONTENT", a_graph.content), create {SQLITE_INTEGER_ARG}.make(":USER_ID",user_id)])
+			l_insert.execute_with_arguments ([l_descr_arg, l_title_arg, create {SQLITE_STRING_ARG}.make (":CONTENT", a_graph.content), create {SQLITE_INTEGER_ARG}.make (":USER_ID", user_id)])
 
 				-- Commit changes
 			last_row_id := l_insert.last_row_id
 			db_mgr.commit
-
 		end
 
 feature -- Delete
 
-	delete_by_id (an_id: INTEGER; user_id : INTEGER)
+	delete_by_id (an_id: INTEGER; user_id: INTEGER)
 			-- delte a row with ID `an_id' from db
 		local
 			l_delete: SQLITE_MODIFY_STATEMENT
@@ -251,24 +249,24 @@ feature -- Delete
 
 				-- Commit handling
 			db_mgr.begin_transaction (False)
-			l_delete.execute_with_arguments ([create {SQLITE_INTEGER_ARG}.make (":ID", an_id),create {SQLITE_INTEGER_ARG}.make (":USER_ID", user_id)])
+			l_delete.execute_with_arguments ([create {SQLITE_INTEGER_ARG}.make (":ID", an_id), create {SQLITE_INTEGER_ARG}.make (":USER_ID", user_id)])
 
 				-- Commit changes
 			db_mgr.commit
 		end
 
 feature -- DB handler
-	db_mgr : SQLITE_DATABASE
+
+	db_mgr: SQLITE_DATABASE
 		do
 			if attached imp_db_mgr as l_db_mgr then
 				Result := l_db_mgr
 			else -- default implementation db
-			 	Result := db
+				Result := db
 			end
-
 		end
 
-	set_up_db_mgr (a_db : SQLITE_DATABASE)
+	set_up_db_mgr (a_db: SQLITE_DATABASE)
 		do
 			imp_db_mgr := a_db
 		end
@@ -279,6 +277,6 @@ feature {NONE} -- Implementation
 
 	last_retrieve_by_id_result: detachable GRAPH
 
-	imp_db_mgr : detachable SQLITE_DATABASE
+	imp_db_mgr: detachable SQLITE_DATABASE
 
 end

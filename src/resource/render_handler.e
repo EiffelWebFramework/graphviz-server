@@ -34,17 +34,23 @@ inherit
 		rename
 			default_create as grm_default_create
 		end
+
 	GRAPHVIZ_FORMATS
+
 	GRAPHVIZ_SERVER_URI_TEMPLATES
+
 	PROCESS_HELPER
+
 create
 	make
 
 feature -- Initialization
+
 	make
 		do
 			grm_default_create
 		end
+
 feature -- execute
 
 	uri_execute (req: WSF_REQUEST; res: WSF_RESPONSE)
@@ -77,14 +83,10 @@ feature --HTTP Methods
 		local
 			m: STRING
 		do
-			if
-				attached {WSF_STRING} req.path_parameter ("uid") as l_id and then l_id.is_integer and then
-				attached {WSF_STRING} req.path_parameter ("gid") as g_id and then g_id.is_integer and then
-				attached {WSF_STRING} req.path_parameter ("type") as l_type
-			then
+			if attached {WSF_STRING} req.path_parameter ("uid") as l_id and then l_id.is_integer and then attached {WSF_STRING} req.path_parameter ("gid") as g_id and then g_id.is_integer and then attached {WSF_STRING} req.path_parameter ("type") as l_type then
 				if attached retrieve_by_id_and_user_id (g_id.integer_value, l_id.integer_value) as l_graph then
 					if is_supported (l_type.value) then
-						build_graph (l_graph,l_id.integer_value, l_type.value)
+						build_graph (l_graph, l_id.integer_value, l_type.value)
 						compute_response_get (req, res, l_id.value, g_id.value, l_type.value)
 					else
 						m := "Format [" + l_type.value + "] is not supported. Try one of the following: "
@@ -99,25 +101,24 @@ feature --HTTP Methods
 				else
 					handle_resource_not_found_response ("Graph not found", req, res)
 				end
-			elseif  attached {WSF_STRING} req.path_parameter ("id") as l_id and then l_id.is_integer and then
-					attached {WSF_STRING} req.path_parameter ("type") as l_type then
-					if attached retrieve_by_id (l_id.integer_value) as l_graph then
-						if is_supported (l_type.value) then
-							build_graph (l_graph,0, l_type.value)
-							compute_response_get (req, res, "0", l_id.value, l_type.value)
-						else
-							m := "Format [" + l_type.value + "] is not supported. Try one of the following: "
-							across
-								supported_formats as c
-							loop
-								m.append (c.item)
-								m.append_character (' ')
-							end
-							handle_bad_request_response (m, req, res)
-						end
+			elseif attached {WSF_STRING} req.path_parameter ("id") as l_id and then l_id.is_integer and then attached {WSF_STRING} req.path_parameter ("type") as l_type then
+				if attached retrieve_by_id (l_id.integer_value) as l_graph then
+					if is_supported (l_type.value) then
+						build_graph (l_graph, 0, l_type.value)
+						compute_response_get (req, res, "0", l_id.value, l_type.value)
 					else
-						handle_resource_not_found_response ("Graph not found", req, res)
+						m := "Format [" + l_type.value + "] is not supported. Try one of the following: "
+						across
+							supported_formats as c
+						loop
+							m.append (c.item)
+							m.append_character (' ')
+						end
+						handle_bad_request_response (m, req, res)
 					end
+				else
+					handle_resource_not_found_response ("Graph not found", req, res)
+				end
 			else
 				handle_resource_not_found_response ("Graph not found", req, res)
 			end
@@ -132,14 +133,13 @@ feature --HTTP Methods
 		do
 			l_msg := ""
 			create fn.make_from_string (document_root)
-			fn.set_file_name ("Graph_" + uid +"_"+ gid + "." + type)
+			fn.set_file_name ("Graph_" + uid + "_" + gid + "." + type)
 			create f.make (fn.string)
 			if f.exists and then f.is_access_readable then
 				f.open_read
 				f.read_stream (f.count)
 				f.close
 				l_msg := f.last_string
-
 				create h.make
 				set_content_type (h, type)
 				h.put_content_length (l_msg.count)
@@ -150,7 +150,7 @@ feature --HTTP Methods
 				res.put_header_text (h.string)
 				res.put_string (l_msg)
 			else
-				handle_internal_server_error ("Unable to generate output %""+ type +"%" for graph %""+ gid.out +"%".", req, res)
+				handle_internal_server_error ("Unable to generate output %"" + type + "%" for graph %"" + gid.out + "%".", req, res)
 			end
 		end
 
@@ -208,9 +208,9 @@ feature -- File Helper
 	create_file (file: STRING; content: STRING_32)
 		local
 			f: PLAIN_TEXT_FILE
---			l_content: STRING
+			--			l_content: STRING
 		do
-			-- FIXME: content will be converted to STRING_8 .. thus possible data loss
+				-- FIXME: content will be converted to STRING_8 .. thus possible data loss
 			create f.make_create_read_write (file)
 			if f.exists and then f.is_access_writable then
 				content.right_adjust
@@ -221,19 +221,17 @@ feature -- File Helper
 
 feature -- Graphviz utils
 
-	build_graph (a_graph: GRAPH; user_id :INTEGER; a_type: STRING)
+	build_graph (a_graph: GRAPH; user_id: INTEGER; a_type: STRING)
 		local
 			fn, ofn: FILE_NAME
 			u: GRAPHVIZ_UTILITIES
 		do
 			create fn.make_from_string (document_root)
-			fn.set_file_name ("temp_"+user_id.out +"_" + a_graph.id.out )
+			fn.set_file_name ("temp_" + user_id.out + "_" + a_graph.id.out)
 			fn.add_extension ("graphviz")
 			create_file (fn.string, a_graph.content)
-
 			create ofn.make_from_string (document_root)
-			ofn.set_file_name ("Graph_"+user_id.out +"_" + a_graph.id.out)
-
+			ofn.set_file_name ("Graph_" + user_id.out + "_" + a_graph.id.out)
 			create u
 			u.set_logger (create {FILE_LOGGER}.make (io.error))
 			u.render_graph_into_file (fn.string, a_type, ofn.string)
@@ -241,7 +239,7 @@ feature -- Graphviz utils
 
 feature {NONE} --Implementation
 
-	set_content_type (header : HTTP_HEADER; type : STRING)
+	set_content_type (header: HTTP_HEADER; type: STRING)
 			-- set header contenty base on `type'
 		do
 			if attached mime_mapping.mime_type (type) as l_content_type then
@@ -267,6 +265,7 @@ feature {NONE} --Implementation
 		once
 			create Result.make_default
 		end
+
 note
 	copyright: "2011-2012, Javier Velilla and others"
 	license: "Eiffel Forum License v2 (see http://www.eiffel.com/licensing/forum.txt)"

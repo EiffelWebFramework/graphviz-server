@@ -8,6 +8,7 @@ class
 	AUTHENTICATION_FILTER
 
 inherit
+
 	WSF_FILTER_CONTEXT_HANDLER [FILTER_HANDLER_CONTEXT]
 		select
 			default_create
@@ -28,10 +29,7 @@ feature -- Basic operations
 			l_auth: HTTP_AUTHORIZATION
 		do
 			create l_auth.make (req.http_authorization)
-			if (attached l_auth.type as l_auth_type and then l_auth_type.is_equal ("basic")) and
-				attached l_auth.login as l_auth_login and then
-				attached l_auth.password as l_auth_password and then
-				attached {USER} retrieve_by_name_and_password (l_auth_login, l_auth_password) as  l_user then
+			if (attached l_auth.type as l_auth_type and then l_auth_type.is_equal ("basic")) and attached l_auth.login as l_auth_login and then attached l_auth.password as l_auth_password and then attached {USER} retrieve_by_name_and_password (l_auth_login, l_auth_password) as l_user then
 				ctx.set_user (l_user)
 				execute_next (ctx, req, res)
 			else
@@ -59,4 +57,5 @@ feature {NONE} -- Implementation
 note
 	copyright: "2011-2012, Olivier Ligot, Jocelyn Fiat and others"
 	license: "Eiffel Forum License v2 (see http://www.eiffel.com/licensing/forum.txt)"
+
 end

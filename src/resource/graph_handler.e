@@ -1,5 +1,5 @@
 note
-	description: "GRAPH_HANDLER handle the graph resources, it allow create, get one or all, delete and updates graphs"
+	description: "GRAPH_HANDLER handle the graph resources, it allow retrieve graph for anonymous users"
 	author: ""
 	date: "$Date$"
 	revision: "$Revision$"
@@ -8,6 +8,7 @@ class
 	GRAPH_HANDLER
 
 inherit
+
 	WSF_URI_HANDLER
 		rename
 			execute as uri_execute,
@@ -39,13 +40,17 @@ inherit
 		end
 
 	REFACTORING_HELPER
+
 create
 	make
+
 feature -- Initialization
+
 	make
 		do
 			grm_default_create
 		end
+
 feature -- execute
 
 	uri_execute (req: WSF_REQUEST; res: WSF_RESPONSE)
@@ -81,9 +86,8 @@ feature -- HTTP Methods
 				--| Maybe the first case need to be refactored and removed to a new
 				--| handler possibly the SEARCH_HANLDER.
 			initialize_converters (json)
-
 			if attached req.orig_path_info as orig_path then
-				if attached {WSF_STRING} req.path_parameter ("id") as l_id and then l_id.is_integer  then
+				if attached {WSF_STRING} req.path_parameter ("id") as l_id and then l_id.is_integer then
 						-- retrieve a graph identidied by l_id
 					if attached retrieve_by_id (l_id.integer_value) as l_graph then
 						if attached collection_json_graph (req, l_graph) as l_cj then
@@ -135,7 +139,6 @@ feature -- HTTP Methods
 			res.put_header_text (h.string)
 			res.put_string (l_msg)
 		end
-
 
 feature {NONE} -- Implementacion Repository and Graph Layer
 
@@ -244,36 +247,34 @@ feature -- Collection JSON
 		do
 			create col.make_with_href (req.absolute_script_url (graph_uri))
 
-			-- Links
+				-- Links
 			create lnk.make (req.absolute_script_url (home_uri), "Home")
 			lnk.set_prompt ("Home Graph")
 			col.add_link (lnk)
 
-
-			-- Template
+				-- Template
 			create tpl.make
-			create d.make_with_name ("title"); d.set_prompt ("Title")
+			create d.make_with_name ("title");
+			d.set_prompt ("Title")
 			if g /= Void then
 				d.set_value (g.title)
 			end
 			tpl.add_data (d)
-
-			create d.make_with_name ("content"); d.set_prompt ("Graphviz Code")
+			create d.make_with_name ("content");
+			d.set_prompt ("Graphviz Code")
 			if g /= Void then
 				d.set_value (g.content)
 			end
 			tpl.add_data (d)
-
-			create d.make_with_name ("description"); d.set_prompt ("Description")
+			create d.make_with_name ("description");
+			d.set_prompt ("Description")
 			if g /= Void then
 				d.set_value (g.description)
 			end
 			tpl.add_data (d)
 			col.set_template (tpl)
-
 			Result := col
 		end
-
 
 	new_data (name: STRING_32; value: detachable STRING_32; prompt: STRING_32): CJ_DATA
 		do
@@ -300,7 +301,6 @@ feature -- Collection JSON
 				Result.set_prompt (l_prompt)
 			end
 		end
-
 
 note
 	copyright: "2011-2012, Javier Velilla and others"

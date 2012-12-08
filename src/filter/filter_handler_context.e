@@ -8,6 +8,7 @@ class
 	FILTER_HANDLER_CONTEXT
 
 inherit
+
 	WSF_HANDLER_CONTEXT
 
 create
@@ -31,4 +32,5 @@ feature -- Element change
 note
 	copyright: "2011-2012, Olivier Ligot, Jocelyn Fiat and others"
 	license: "Eiffel Forum License v2 (see http://www.eiffel.com/licensing/forum.txt)"
+
 end
