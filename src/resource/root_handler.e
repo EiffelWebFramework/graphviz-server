@@ -24,7 +24,7 @@ inherit
 
 	REFACTORING_HELPER
 
-	GRAPHVIZ_SERVER_URI_TEMPLATES
+	COLLECTION_JSON_HELPER
 
 feature -- execute
 
@@ -71,42 +71,7 @@ feature --HTTP Methods
 			res.put_string (l_msg)
 		end
 
-	collection_json_root (req: WSF_REQUEST): STRING
-		do
-			create Result.make_from_string (collection_json_root_tpl)
-			Result.replace_substring_all ("$USER_REGISTER_URL", req.absolute_script_url (user_register_uri))
-			Result.replace_substring_all ("$USER_LOGIN_URL", req.absolute_script_url (user_login_uri))
-			Result.replace_substring_all ("$GRAPH_URL", req.absolute_script_url (graph_uri))
-		end
 
-	collection_json_root_tpl: STRING = "[
-					{
-			   	 "collection": {
-			        "items": [],
-			        "links": [
-			            {
-			                "href": "$USER_REGISTER_URL",
-			                "prompt": "User Register",
-			                "rel": "Register"
-			            },
-			            {
-			                "href": "$USER_LOGIN_URL",
-			                "prompt": "User Login",
-			                "rel": "Login"
-			            },
-			             {
-			                "href": "$GRAPH_URL",
-			                "prompt": "Graph List",
-			                "rel": "Graph"
-			            }
-			            
-			        ],
-			        "queries": [],
-			        "templates": [],
-			        "version": "1.0"
-			    	}
-				}
-		]"
 
 note
 	copyright: "2011-2012, Javier Velilla and others"
