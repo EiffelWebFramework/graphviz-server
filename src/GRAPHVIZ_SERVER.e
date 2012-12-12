@@ -52,12 +52,12 @@ feature {NONE} -- Initialization
 		do
 			create router.make (10)
 			create root_handler
-			create render_handler.make
-			create user_register_handler.make
-			create user_graph_handler.make
-			create user_login_handler.make
-			create user_handler.make
-			create graph_handler.make
+			create render_handler
+			create user_register_handler
+			create user_graph_handler
+			create user_login_handler
+			create user_handler
+			create graph_handler
 
 				-- user login authentication filter
 			create user_login_authentication_filter

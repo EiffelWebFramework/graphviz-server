@@ -13,8 +13,6 @@ inherit
 		rename
 			execute as uri_execute,
 			new_mapping as new_uri_mapping
-		select
-			default_create
 		end
 
 	WSF_URI_TEMPLATE_HANDLER
@@ -30,26 +28,13 @@ inherit
 			do_get
 		end
 
-	GRAPH_MANAGER
-		rename
-			default_create as grm_default_create
-		end
+	SHARED_DATABASE_API
 
 	GRAPHVIZ_FORMATS
 
 	GRAPHVIZ_SERVER_URI_TEMPLATES
 
 	PROCESS_HELPER
-
-create
-	make
-
-feature -- Initialization
-
-	make
-		do
-			grm_default_create
-		end
 
 feature -- execute
 
@@ -84,7 +69,7 @@ feature --HTTP Methods
 			m: STRING
 		do
 			if attached {WSF_STRING} req.path_parameter ("uid") as l_id and then l_id.is_integer and then attached {WSF_STRING} req.path_parameter ("gid") as g_id and then g_id.is_integer and then attached {WSF_STRING} req.path_parameter ("type") as l_type then
-				if attached retrieve_by_id_and_user_id (g_id.integer_value, l_id.integer_value) as l_graph then
+				if attached graph_dao.retrieve_by_id_and_user_id (g_id.integer_value, l_id.integer_value) as l_graph then
 					if is_supported (l_type.value) then
 						build_graph (l_graph, l_id.integer_value, l_type.value)
 						compute_response_get (req, res, l_id.value, g_id.value, l_type.value)
@@ -102,7 +87,7 @@ feature --HTTP Methods
 					handle_resource_not_found_response ("Graph not found", req, res)
 				end
 			elseif attached {WSF_STRING} req.path_parameter ("id") as l_id and then l_id.is_integer and then attached {WSF_STRING} req.path_parameter ("type") as l_type then
-				if attached retrieve_by_id (l_id.integer_value) as l_graph then
+				if attached graph_dao.retrieve_by_id (l_id.integer_value) as l_graph then
 					if is_supported (l_type.value) then
 						build_graph (l_graph, 0, l_type.value)
 						compute_response_get (req, res, "0", l_id.value, l_type.value)

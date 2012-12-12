@@ -10,9 +10,6 @@ class
 inherit
 
 	WSF_FILTER_CONTEXT_HANDLER [FILTER_HANDLER_CONTEXT]
-		select
-			default_create
-		end
 
 	WSF_URI_TEMPLATE_CONTEXT_HANDLER [FILTER_HANDLER_CONTEXT]
 
@@ -23,24 +20,11 @@ inherit
 
 	SHARED_EJSON
 
-	USER_MANAGER
-		rename
-			default_create as urm_default_create
-		end
+	SHARED_DATABASE_API
 
 	REFACTORING_HELPER
 
 	GRAPHVIZ_SERVER_URI_TEMPLATES
-
-create
-	make
-
-feature -- Initialization
-
-	make
-		do
-			urm_default_create
-		end
 
 feature -- execute
 
@@ -67,8 +51,7 @@ feature --HTTP Methods
 			cj_error: CJ_ERROR
 		do
 			if attached {USER} ctx.user as l_user then
-					-- save graph
-				if attached {USER} retrieve_by_name_and_password (l_user.user_name, l_user.password) as a_user then
+				if attached {USER} user_dao.retrieve_by_name_and_password (l_user.user_name, l_user.password) as a_user then
 					compute_response_get (req, res, a_user)
 				else
 					if attached json_to_cj (collection_json_user (req, 0)) as l_cj then

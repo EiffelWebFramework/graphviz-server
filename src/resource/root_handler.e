@@ -60,6 +60,8 @@ feature --HTTP Methods
 			l_msg: STRING
 		do
 			create h.make
+		    --| What about to create HTTP_VENDOR_CONTENT_TYPES?
+		    --| Maybe we can provide a facility to register new vendor content types.
 			h.put_content_type ("application/vnd.collection+json")
 			l_msg := collection_json_root (req)
 			h.put_content_length (l_msg.count)

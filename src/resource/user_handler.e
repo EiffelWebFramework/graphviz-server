@@ -10,9 +10,6 @@ class
 inherit
 
 	WSF_FILTER_CONTEXT_HANDLER [FILTER_HANDLER_CONTEXT]
-		select
-			default_create
-		end
 
 	WSF_URI_TEMPLATE_CONTEXT_HANDLER [FILTER_HANDLER_CONTEXT]
 
@@ -21,26 +18,11 @@ inherit
 			do_get
 		end
 
-	SHARED_EJSON
+	COLLECTION_JSON_HELPER
 
-	GRAPHVIZ_SERVER_URI_TEMPLATES
-
-	USER_MANAGER
-		rename
-			default_create as urm_default_create
-		end
+	SHARED_DATABASE_API
 
 	REFACTORING_HELPER
-
-create
-	make
-
-feature -- Initialization
-
-	make
-		do
-			urm_default_create
-		end
 
 feature -- execute
 
@@ -61,108 +43,54 @@ feature -- HTTP Methods
 			-- 200 OK, and a representation of the root collection JSON
 			-- If the GET request is not SUCCESS, we response with
 			-- 404 Resource not found
+		require else
+			authenticated_user_attached: attached ctx.user
 		local
-			cj_error: CJ_ERROR
-			l_credentials: TUPLE [user: STRING; password: STRING]
+			l_cj: CJ_COLLECTION
 		do
 				--| TODO refactor code.
 			initialize_converters (json)
-			if attached req.http_authorization as http_authorization and then attached {WSF_STRING} req.path_parameter ("id") as l_id and then l_id.is_integer then
-				l_credentials := retieve_credentials (http_authorization)
-				if attached {USER} retrieve_by_name_and_password (l_credentials.user, l_credentials.password) as a_user then
-					compute_response_get (req, res, a_user)
-				else
-					if attached json_to_cj (collection_json_user (req, l_id.integer_value)) as l_cj then
-						create cj_error.make ("User name does not exist or the password is wrong", "002", "The user name " + l_credentials.user + " not exist in the system or the password was wrong, try again")
-						l_cj.set_error (cj_error)
-						if attached json.value (l_cj) as l_cj_answer then
-							compute_response_get_error (req, res, l_cj_answer.representation)
+			if attached {WSF_STRING} req.path_parameter ("id") as l_id and then l_id.is_integer and then attached ctx.user as auth_user and then attached user_dao.retrieve_by_id (l_id.integer_value) as l_user then
+				if l_user.id = auth_user.id then
+					if attached json_to_cj (collection_json_user_graph (req, l_user.id)) as cj then
+						if attached json.value (cj) as l_cj_answer then
+							compute_response_get (req, res, l_cj_answer.representation, {HTTP_STATUS_CODE}.ok)
 						end
+					end
+				elseif attached ctx.user as l_auth_user then
+						-- Trying to access another user that the authenticated one,
+						-- which is forbidden in this example...
+					l_cj := collection_json_root_builder (req)
+					l_cj.set_error (new_error ("Fobidden", "003", "You try to access the user " + l_id.value + " while authenticating with the user " + l_auth_user.id.out))
+					if attached json.value (l_cj) as l_cj_answer then
+						compute_response_get (req, res, l_cj_answer.representation, {HTTP_STATUS_CODE}.forbidden)
 					end
 				end
 			else
-				handle_basic_authentication_error (req, res, "Graphviz")
-			end
-		end
-
-	compute_response_get (req: WSF_REQUEST; res: WSF_RESPONSE; a_user: USER)
-		local
-			h: HTTP_HEADER
-			l_msg: STRING
-		do
-			create h.make
-			h.put_content_type ("application/vnd.collection+json")
-			if attached json_to_cj (collection_json_user_graph (req, a_user.id)) as l_cj then
+				l_cj := collection_json_root_builder (req)
+				l_cj.set_error (new_error ("Not found", "004", "You try to access the user " + req.request_uri + " and it does not exist in the system"))
 				if attached json.value (l_cj) as l_cj_answer then
-					l_msg := l_cj_answer.representation
-					h.put_content_length (l_msg.count)
-					if attached req.request_time as time then
-						h.put_utc_date (time)
-					end
-					res.set_status_code ({HTTP_STATUS_CODE}.ok)
-					res.put_header_text (h.string)
-					res.put_string (l_msg)
+					compute_response_get (req, res, l_cj_answer.representation, {HTTP_STATUS_CODE}.not_found)
 				end
 			end
 		end
 
-	compute_response_get_error (req: WSF_REQUEST; res: WSF_RESPONSE; an_answer: STRING)
+	compute_response_get (req: WSF_REQUEST; res: WSF_RESPONSE; msg: STRING; status_code: INTEGER)
 		local
 			h: HTTP_HEADER
 		do
 			create h.make
 			h.put_content_type ("application/vnd.collection+json")
-			h.put_content_length (an_answer.count)
+			h.put_content_length (msg.count)
 			if attached req.request_time as time then
 				h.put_utc_date (time)
 			end
-			res.set_status_code ({HTTP_STATUS_CODE}.bad_request)
+			res.set_status_code (status_code)
 			res.put_header_text (h.string)
-			res.put_string (an_answer)
+			res.put_string (msg)
 		end
 
 feature {NONE} -- Implementacion Repository and Graph Layer
-
-	json_to_cj (post: STRING): detachable CJ_COLLECTION
-		local
-			parser: JSON_PARSER
-		do
-			initialize_converters (json)
-			create parser.make_parser (post)
-			if attached parser.parse_object as cj and parser.is_parsed then
-				if attached {CJ_COLLECTION} json.object (cj, "CJ_COLLECTION") as l_col then
-					Result := l_col
-				end
-			end
-		end
-
-	json_to_cj_template (post: STRING): detachable CJ_TEMPLATE
-		local
-			parser: JSON_PARSER
-		do
-			initialize_converters (json)
-			create parser.make_parser (post)
-			if attached parser.parse_object as cj and parser.is_parsed then
-				if attached {CJ_TEMPLATE} json.object (cj.item ("template"), "CJ_TEMPLATE") as l_col then
-					Result := l_col
-				end
-			end
-		end
-
-	initialize_converters (j: like json)
-			-- Initialize json converters
-		do
-			j.add_converter (create {CJ_COLLECTION_JSON_CONVERTER}.make)
-			json.add_converter (create {CJ_DATA_JSON_CONVERTER}.make)
-			j.add_converter (create {CJ_ERROR_JSON_CONVERTER}.make)
-			j.add_converter (create {CJ_ITEM_JSON_CONVERTER}.make)
-			j.add_converter (create {CJ_QUERY_JSON_CONVERTER}.make)
-			j.add_converter (create {CJ_TEMPLATE_JSON_CONVERTER}.make)
-			j.add_converter (create {CJ_LINK_JSON_CONVERTER}.make)
-			if j.converter_for (create {ARRAYED_LIST [detachable ANY]}.make (0)) = Void then
-				j.add_converter (create {CJ_ARRAYED_LIST_JSON_CONVERTER}.make)
-			end
-		end
 
 	extract_cj_request (l_post: STRING): detachable GRAPH
 			-- extract an object Order from the request, or Void
@@ -188,108 +116,6 @@ feature {NONE} -- Implementacion Repository and Graph Layer
 					create Result.make (l_content, l_title, l_description)
 				end
 			end
-		end
-
-	collection_json_user_graph (req: WSF_REQUEST; user_id: INTEGER): STRING
-		do
-			create Result.make_from_string (collection_json_user_graph_tpl)
-			Result.replace_substring_all ("$HOME_URL", req.absolute_script_url (home_uri))
-			Result.replace_substring_all ("$USER_URI", req.absolute_script_url (user_id_uri (user_id)))
-			Result.replace_substring_all ("$USER_GRAPH_URI", req.absolute_script_url (user_id_graph_uri (user_id)))
-		end
-
-	collection_json_user (req: WSF_REQUEST; user_id: INTEGER): STRING
-		do
-			create Result.make_from_string (collection_json_user_tpl)
-			Result.replace_substring_all ("$HOME_URL", req.absolute_script_url (home_uri))
-			Result.replace_substring_all ("$USER_URI", req.absolute_script_url (user_id_uri (user_id)))
-		end
-
-	collection_json_user_tpl: STRING = "[
-					{
-			   	 "collection": {
-			        "items": [],
-			        "links": [
-			            {
-			                "href": "$HOME_URL",
-			                "prompt": "Home Graph",
-			                "rel": "Home"
-			            },
-			            {
-			                "href": "$USER_URI",
-			                "prompt": "User Home",
-			                "rel": "User Home"
-			            }
-			        ],
-			        "queries": [],
-			        "templates": [],
-			        "version": "1.0"
-			    	}
-				}
-		]"
-
-	collection_json_user_graph_tpl: STRING = "[
-					{
-			   	 "collection": {
-			        "items": [],
-			        "links": [
-			            {
-			                "href": "$HOME_URL",
-			                "prompt": "Home Graph",
-			                "rel": "Home"
-			            },
-			            {
-			                "href": "$USER_URI",
-			                "prompt": "User Home",
-			                "rel": "User Home"
-			            }, 
-			            {
-			                "href": "$USER_GRAPH_URI",
-			                "prompt": "User Graphs",
-			                "rel": "User Graphs"
-			            }
-			            
-			        ],
-			        "queries": [],
-			        "templates": [],
-			        "version": "1.0"
-			    	}
-				}
-		]"
-
-feature -- Collection JSON
-
-feature -- Basic Authentication
-
-	retieve_credentials (http_authorization: READABLE_STRING_8): TUPLE [user: STRING; password: STRING]
-		local
-			l_list: LIST [READABLE_STRING_8]
-			l_cred: LIST [READABLE_STRING_8]
-			decode: BASE64
-			l_secret: STRING
-		do
-			l_list := http_authorization.split (' ')
-			check
-				l_list.count = 2
-				l_list.at (1) ~ "Basic"
-			end
-			create decode
-			l_secret := decode.decoded_string (l_list.at (2))
-			l_cred := l_secret.split (':')
-			create Result
-			Result.put (l_cred.at (1), 1)
-			Result.put (l_cred.at (2), 2)
-		end
-
-	handle_basic_authentication_error (req: WSF_REQUEST; res: WSF_RESPONSE; realm: STRING)
-		local
-			h: HTTP_HEADER
-		do
-			create h.make
-			h.put_current_date
-			h.add_header_key_value ("WWW-Authenticate", "Basic realm= %"" + realm + "%"")
-			res.set_status_code ({HTTP_STATUS_CODE}.unauthorized)
-			res.put_header_text (h.string)
 		end
 
 note

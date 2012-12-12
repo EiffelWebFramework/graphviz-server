@@ -10,9 +10,6 @@ class
 inherit
 
 	WSF_FILTER_CONTEXT_HANDLER [FILTER_HANDLER_CONTEXT]
-		select
-			default_create
-		end
 
 	WSF_URI_TEMPLATE_CONTEXT_HANDLER [FILTER_HANDLER_CONTEXT]
 
@@ -24,28 +21,11 @@ inherit
 			do_delete
 		end
 
-	SHARED_EJSON
+	COLLECTION_JSON_HELPER
 
-	GRAPHVIZ_SERVER_URI_TEMPLATES
-
-	GRAPH_MANAGER
-		rename
-			default_create as grm_default_create
-		end
+	SHARED_DATABASE_API
 
 	REFACTORING_HELPER
-
-create
-	make
-
-feature -- Initialization
-
-	make
-		do
-			grm_default_create
-		end
-
-feature -- execute
 
 feature -- execute
 
@@ -70,7 +50,7 @@ feature -- HTTP Methods
 			-- If the GET request is not SUCCESS, we response with
 			-- 404 Resource not found
 		local
-			cj_error: CJ_ERROR
+			l_cj: CJ_COLLECTION
 		do
 				--| TODO refactor code.
 				--| GET need to handle two different kind of request now.
@@ -82,43 +62,74 @@ feature -- HTTP Methods
 				--| handler possibly the SEARCH_HANLDER.
 			initialize_converters (json)
 			if attached req.orig_path_info as orig_path then
-				if attached {WSF_STRING} req.path_parameter ("uid") as l_id and then l_id.is_integer and then attached {WSF_STRING} req.path_parameter ("gid") as g_id and then g_id.is_integer then
+				if attached {WSF_STRING} req.path_parameter ("uid") as l_id and then l_id.is_integer and then attached {WSF_STRING} req.path_parameter ("gid") as g_id and then g_id.is_integer and then attached ctx.user as auth_user and then attached user_dao.retrieve_by_id (l_id.integer_value) as l_user then
 						-- retrieve a graph identidied by uid and gid
-					if attached retrieve_by_id_and_user_id (g_id.integer_value, l_id.integer_value) as l_graph then
-						if attached collection_json_graph (req, l_id.integer_value, l_graph) as l_cj then
-							build_item (req, l_id.integer_value, l_graph, l_cj)
-							if attached json.value (l_cj) as l_cj_answer then
-								compute_response_get (req, res, l_cj_answer.representation)
-							end
-						end
-					else
-						if attached collection_json_graph (req, l_id.integer_value, Void) as l_cj then
-							create cj_error.make ("Resource not found", "001", "The graph id " + g_id.out + " does not exist in the system for the user " + l_id.out)
-							l_cj.set_error (cj_error)
-							if attached json.value (l_cj) as l_cj_answer then
-								handle_resource_not_found_response (l_cj_answer.representation, req, res)
-							end
+					if l_user.id = auth_user.id then
+						process_graph_by_user (req, res, g_id.integer_value, l_id.integer_value)
+					elseif attached ctx.user as l_auth_user then
+							-- Trying to access another user that the authenticated one,
+							-- which is forbidden in this example...
+						l_cj := collection_json_root_builder (req)
+						l_cj.set_error (new_error ("Fobidden", "003", "You try to access the user " + l_id.value + " while authenticating with the user " + l_auth_user.id.out))
+						if attached json.value (l_cj) as l_cj_answer then
+							compute_response (req, res, l_cj_answer.representation, {HTTP_STATUS_CODE}.forbidden)
 						end
 					end
-				elseif attached {WSF_STRING} req.path_parameter ("uid") as l_id and then l_id.is_integer then
-						-- retrieve all
-					if attached retrieve_all_by_user_id (l_id.integer_value) as graphs then
-						if attached collection_json_graph (req, l_id.integer_value, Void) as l_cj then
-							across
-								graphs as ic
-							loop
-								build_item (req, l_id.integer_value, ic.item, l_cj)
-							end
-							if attached json.value (l_cj) as l_cj_answer then
-								compute_response_get (req, res, l_cj_answer.representation)
-							end
+				elseif attached {WSF_STRING} req.path_parameter ("uid") as l_id and then l_id.is_integer and then attached ctx.user as auth_user and then attached {USER} user_dao.retrieve_by_id (l_id.integer_value) as l_user then
+						-- retrieve all graphs
+
+					if l_user.id = auth_user.id then
+						process_graphs_by_user (req, res, l_id.integer_value)
+					elseif attached ctx.user as l_auth_user then
+							-- Trying to access another user that the authenticated one,
+							-- which is forbidden in this example...
+						l_cj := collection_json_root_builder (req)
+						l_cj.set_error (new_error ("Fobidden", "003", "You try to access the user " + l_id.value + " while authenticating with the user " + l_auth_user.id.out))
+						if attached json.value (l_cj) as l_cj_answer then
+							compute_response (req, res, l_cj_answer.representation, {HTTP_STATUS_CODE}.forbidden)
 						end
 					end
 				end
 			end
 		end
 
-	compute_response_get (req: WSF_REQUEST; res: WSF_RESPONSE; msg: STRING)
+	process_graph_by_user (req: WSF_REQUEST; res: WSF_RESPONSE; gid: INTEGER; uid: INTEGER)
+		local
+			l_cj: CJ_COLLECTION
+		do
+			if attached graph_dao.retrieve_by_id_and_user_id (gid, uid) as l_graph then
+				l_cj := collection_json_user_graph_builder (req, uid, l_graph)
+				build_item_user (req, uid, l_graph, l_cj)
+				if attached json.value (l_cj) as l_cj_answer then
+					compute_response (req, res, l_cj_answer.representation, {HTTP_STATUS_CODE}.ok)
+				end
+			else
+				l_cj := collection_json_user_graph_builder (req, uid, Void)
+				l_cj.set_error (new_error ("Resource not found", "001", "The graph id " + gid.out + " does not exist in the system for the user " + uid.out))
+				if attached json.value (l_cj) as l_cj_answer then
+					compute_response (req, res, l_cj_answer.representation, {HTTP_STATUS_CODE}.not_found)
+				end
+			end
+		end
+
+	process_graphs_by_user (req: WSF_REQUEST; res: WSF_RESPONSE; uid: INTEGER)
+		local
+			l_cj: CJ_COLLECTION
+		do
+			if attached graph_dao.retrieve_all_by_user_id (uid) as graphs then
+				l_cj := collection_json_user_graph_builder (req, uid, Void)
+				across
+					graphs as ic
+				loop
+					build_item_user (req, uid, ic.item, l_cj)
+				end
+				if attached json.value (l_cj) as l_cj_answer then
+					compute_response (req, res, l_cj_answer.representation, {HTTP_STATUS_CODE}.ok)
+				end
+			end
+		end
+
+	compute_response (req: WSF_REQUEST; res: WSF_RESPONSE; msg: STRING; status_code: INTEGER)
 		local
 			h: HTTP_HEADER
 			l_msg: STRING
@@ -130,7 +141,7 @@ feature -- HTTP Methods
 			if attached req.request_time as time then
 				h.put_utc_date (time)
 			end
-			res.set_status_code ({HTTP_STATUS_CODE}.ok)
+			res.set_status_code (status_code)
 			res.put_header_text (h.string)
 			res.put_string (l_msg)
 		end
@@ -147,20 +158,35 @@ feature -- HTTP Methods
 		local
 			l_post: STRING
 			l_helper: WSF_RESOURCE_HANDLER_HELPER
+			l_cj: CJ_COLLECTION
 		do
 			create l_helper
 			l_post := l_helper.retrieve_data (req)
-			if attached extract_cj_request (l_post) as l_graph and then attached {WSF_STRING} req.path_parameter ("uid") as l_id and then l_id.is_integer then
+			if attached extract_cj_request (l_post) as l_graph and then attached ctx.user as auth_user and then attached {WSF_STRING} req.path_parameter ("uid") as l_id and then l_id.is_integer and then attached {USER} user_dao.retrieve_by_id (l_id.integer_value) as l_user then
 					-- save graph
 					-- return the location uri of the graph and return a 201
 					--| Here maybe we need to verify if the save action in
 					--| was succesful or not, if not was successfull, we need to
 					--| send a 50x error.
-				insert (l_graph, l_id.integer_value)
-				l_graph.set_id (last_row_id.to_integer_32)
-				compute_response_post (req, res, l_id.integer_value, l_graph)
+				if l_user.id = auth_user.id then
+					graph_dao.insert (l_graph, l_id.integer_value)
+					l_graph.set_id (graph_dao.last_row_id.to_integer_32)
+					compute_response_post (req, res, l_id.integer_value, l_graph)
+				elseif attached ctx.user as l_auth_user then
+						-- Trying to access another user that the authenticated one,
+						-- which is forbidden in this example...
+					l_cj := collection_json_root_builder (req)
+					l_cj.set_error (new_error ("Fobidden", "003", "You try to access the user " + l_id.value + " while authenticating with the user " + l_auth_user.id.out))
+					if attached json.value (l_cj) as l_cj_answer then
+						compute_response (req, res, l_cj_answer.representation, {HTTP_STATUS_CODE}.forbidden)
+					end
+				end
 			else
-				handle_bad_request_response (l_post + "%N is not a valid Graph", req, res)
+				l_cj := collection_json_root_builder (req)
+				l_cj.set_error (new_error ("Bad request", "003", l_post + "%N is not a valid Graph"))
+				if attached json.value (l_cj) as l_cj_answer then
+					compute_response (req, res, l_cj_answer.representation, {HTTP_STATUS_CODE}.bad_request)
+				end
 			end
 		end
 
@@ -190,13 +216,30 @@ feature -- HTTP Methods
 			-- 200 if is ok
 			-- 404 Resource not found
 			-- 500 if we have an internal server error
+		local
+			l_cj : CJ_COLLECTION
 		do
 			if attached req.orig_path_info as orig_path then
-				if attached {WSF_STRING} req.path_parameter ("uid") as l_id and then l_id.is_integer and then attached {WSF_STRING} req.path_parameter ("gid") as g_id and then g_id.is_integer then
-					delete_by_id (g_id.integer_value, l_id.integer_value)
-					compute_response_delete (req, res)
+				if attached {WSF_STRING} req.path_parameter ("uid") as l_id and then l_id.is_integer and then attached ctx.user as auth_user and then attached {WSF_STRING} req.path_parameter ("gid") as g_id and then g_id.is_integer and then attached {USER} user_dao.retrieve_by_id (l_id.integer_value) as l_user then
+					if l_user.id = auth_user.id then
+						graph_dao.delete_by_id (g_id.integer_value, l_id.integer_value)
+						compute_response_delete (req, res)
+					elseif attached ctx.user as l_auth_user then
+							-- Trying to access another user that the authenticated one,
+							-- which is forbidden in this example...
+							l_cj := collection_json_root_builder (req)
+							l_cj.set_error (new_error ("Fobidden", "003", "You try to access the user " + l_id.value + " while authenticating with the user " + l_auth_user.id.out))
+							if attached json.value (l_cj) as l_cj_answer then
+								compute_response (req, res, l_cj_answer.representation, {HTTP_STATUS_CODE}.forbidden)
+							end
+					end
 				else
-					handle_resource_not_found_response (orig_path + " not found in this server", req, res)
+						l_cj := collection_json_root_builder (req)
+						l_cj.set_error (new_error ("Resource not found", "003", "Resource " + req.request_uri + " not found "))
+						if attached json.value (l_cj) as l_cj_answer then
+							compute_response (req, res, l_cj_answer.representation, {HTTP_STATUS_CODE}.not_found)
+						end
+
 				end
 			end
 		end
@@ -225,21 +268,36 @@ feature -- HTTP Methods
 		local
 			l_put: STRING
 			l_helper: WSF_RESOURCE_HANDLER_HELPER
+			l_cj : CJ_COLLECTION
 		do
 				--|WSF_RESOURCE_CONTEXT_HANDLER_HELPER does not have a retrieve_data, it should.
 
 			create l_helper
 			l_put := l_helper.retrieve_data (req)
 			if attached req.orig_path_info as orig_path then
-				if attached {WSF_STRING} req.path_parameter ("uid") as l_id and then l_id.is_integer and then attached {WSF_STRING} req.path_parameter ("gid") as g_id and then g_id.is_integer then
-					if attached extract_cj_request (l_put) as lreq_graph and then attached retrieve_by_id_and_user_id (g_id.integer_value, l_id.integer_value) as ldb_graph then
-						ldb_graph.set_description (lreq_graph.description)
-						ldb_graph.set_title (lreq_graph.title)
-						ldb_graph.set_content (lreq_graph.content)
-						update (ldb_graph, l_id.integer_value)
-						compute_response_put (req, res)
-					else
-						handle_resource_not_found_response (orig_path + " not found in this server", req, res)
+				if attached {WSF_STRING} req.path_parameter ("uid") as l_id and then l_id.is_integer and then attached {WSF_STRING} req.path_parameter ("gid") as g_id and then g_id.is_integer and then attached ctx.user as auth_user and then attached {USER} user_dao.retrieve_by_id (l_id.integer_value) as l_user then
+					if l_user.id = auth_user.id then
+						if attached extract_cj_request (l_put) as lreq_graph and then attached graph_dao.retrieve_by_id_and_user_id (g_id.integer_value, l_id.integer_value) as ldb_graph then
+							ldb_graph.set_description (lreq_graph.description)
+							ldb_graph.set_title (lreq_graph.title)
+							ldb_graph.set_content (lreq_graph.content)
+							graph_dao.update (ldb_graph, l_id.integer_value)
+							compute_response_put (req, res)
+						else
+								l_cj := collection_json_root_builder (req)
+								l_cj.set_error (new_error ("Resource not found", "003", orig_path + " not found"))
+								if attached json.value (l_cj) as l_cj_answer then
+									compute_response (req, res, l_cj_answer.representation, {HTTP_STATUS_CODE}.not_found)
+								end
+						end
+					elseif attached ctx.user as l_auth_user then
+							-- Trying to access another user that the authenticated one,
+							-- which is forbidden in this example...
+							l_cj := collection_json_root_builder (req)
+							l_cj.set_error (new_error ("Fobidden", "003", "You try to access the user " + l_id.value + " while authenticating with the user " + l_auth_user.id.out))
+							if attached json.value (l_cj) as l_cj_answer then
+								compute_response (req, res, l_cj_answer.representation, {HTTP_STATUS_CODE}.forbidden)
+							end
 					end
 				end
 			end
@@ -261,34 +319,6 @@ feature -- HTTP Methods
 		end
 
 feature {NONE} -- Implementacion Repository and Graph Layer
-
-	json_to_cj_template (post: STRING): detachable CJ_TEMPLATE
-		local
-			parser: JSON_PARSER
-		do
-			initialize_converters (json)
-			create parser.make_parser (post)
-			if attached parser.parse_object as cj and parser.is_parsed then
-				if attached {CJ_TEMPLATE} json.object (cj.item ("template"), "CJ_TEMPLATE") as l_col then
-					Result := l_col
-				end
-			end
-		end
-
-	initialize_converters (j: like json)
-			-- Initialize json converters
-		do
-			j.add_converter (create {CJ_COLLECTION_JSON_CONVERTER}.make)
-			json.add_converter (create {CJ_DATA_JSON_CONVERTER}.make)
-			j.add_converter (create {CJ_ERROR_JSON_CONVERTER}.make)
-			j.add_converter (create {CJ_ITEM_JSON_CONVERTER}.make)
-			j.add_converter (create {CJ_QUERY_JSON_CONVERTER}.make)
-			j.add_converter (create {CJ_TEMPLATE_JSON_CONVERTER}.make)
-			j.add_converter (create {CJ_LINK_JSON_CONVERTER}.make)
-			if j.converter_for (create {ARRAYED_LIST [detachable ANY]}.make (0)) = Void then
-				j.add_converter (create {CJ_ARRAYED_LIST_JSON_CONVERTER}.make)
-			end
-		end
 
 	extract_cj_request (l_post: STRING): detachable GRAPH
 			-- extract an object Order from the request, or Void
@@ -313,115 +343,6 @@ feature {NONE} -- Implementacion Repository and Graph Layer
 				if l_content /= Void then
 					create Result.make (l_content, l_title, l_description)
 				end
-			end
-		end
-
-feature -- Collection JSON
-
-	build_item (req: WSF_REQUEST; user_id: INTEGER; a_graph: GRAPH; cj: CJ_COLLECTION)
-		local
-			cj_item: CJ_ITEM
-		do
-			create cj_item.make (req.absolute_script_url (user_graph_id_uri (user_id, a_graph.id)))
-			cj_item.add_data (new_data ("description", a_graph.description, "Description"))
-			cj_item.add_data (new_data ("content", a_graph.content, "Graph"))
-			cj_item.add_data (new_data ("title", a_graph.title, "Title"))
-			cj_item.add_link (new_link (req.absolute_script_url (user_graph_id_type_uri (user_id, a_graph.id, "png")), "Image", "Graph", "Title", "image/png"))
-			cj_item.add_link (new_link (req.absolute_script_url (user_graph_id_type_uri (user_id, a_graph.id, "jpg")), "Image", "Graph", "Title", "image/jpg"))
-			cj_item.add_link (new_link (req.absolute_script_url (user_graph_id_type_uri (user_id, a_graph.id, "pdf")), "Image", "Graph", "Title", "application/pdf"))
-			cj_item.add_link (new_link (req.absolute_script_url (user_graph_id_type_uri (user_id, a_graph.id, "gif")), "Image", "Graph", "Title", "application/gif"))
-			cj.add_item (cj_item)
-		end
-
-	collection_json_graph (req: WSF_REQUEST; user_id: INTEGER; g: detachable GRAPH): CJ_COLLECTION
-			--	"[
-			--			{
-			--		   	 "collection": {
-			--			   	"href": "$GRAPH_URL",
-			--		        "items": [],
-			--		        "links": [
-			--		            {
-			--		                "href": "$HOME_URL",
-			--		                "prompt": "Home Graph",
-			--		                "rel": "Home"
-			--		            }
-			--		        ],
-			--		        "queries": [],
-			--		        "template":{
-			--		    		   "data" :
-			--		       				 [
-			--		        			{"name" : "title", "value" : "","prompt" :"Title"},
-			--		        			{"name" : "content", "value" : "", "prompt" : "Graphviz Code"},
-			--		        			{"name" : "description", "value" : "", "prompt" : "Description"}
-			--		        	 ]
-			--		   			},
-			--		        "version": "1.0"
-			--		    	}
-			--			}
-			--	]"
-		local
-			col: CJ_COLLECTION
-			lnk: CJ_LINK
-			tpl: CJ_TEMPLATE
-			d: CJ_DATA
-		do
-			create col.make_with_href (req.absolute_script_url (user_id_graph_uri (user_id)))
-
-				-- Links
-			create lnk.make (req.absolute_script_url (home_uri), "Home")
-			lnk.set_prompt ("Home Graph")
-			col.add_link (lnk)
-			create lnk.make (req.absolute_script_url (user_id_uri (user_id)), "User")
-			lnk.set_prompt ("Home User")
-			col.add_link (lnk)
-
-				-- Template
-			create tpl.make
-			create d.make_with_name ("title");
-			d.set_prompt ("Title")
-			if g /= Void then
-				d.set_value (g.title)
-			end
-			tpl.add_data (d)
-			create d.make_with_name ("content");
-			d.set_prompt ("Graphviz Code")
-			if g /= Void then
-				d.set_value (g.content)
-			end
-			tpl.add_data (d)
-			create d.make_with_name ("description");
-			d.set_prompt ("Description")
-			if g /= Void then
-				d.set_value (g.description)
-			end
-			tpl.add_data (d)
-			col.set_template (tpl)
-			Result := col
-		end
-
-	new_data (name: STRING_32; value: detachable STRING_32; prompt: STRING_32): CJ_DATA
-		do
-			create Result.make
-			Result.set_name (name)
-			if attached value as l_val then
-				Result.set_value (l_val)
-			else
-				Result.set_value ("")
-			end
-			Result.set_prompt (prompt)
-		end
-
-	new_link (href: STRING_32; rel: STRING_32; prompt: detachable STRING_32; name: detachable STRING_32; render: detachable STRING_32): CJ_LINK
-		do
-			create Result.make (href, rel)
-			if attached name as l_name then
-				Result.set_name (l_name)
-			end
-			if attached render as l_render then
-				Result.set_render (l_render)
-			end
-			if attached prompt as l_prompt then
-				Result.set_prompt (l_prompt)
 			end
 		end
 

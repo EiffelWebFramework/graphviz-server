@@ -13,8 +13,6 @@ inherit
 		rename
 			execute as uri_execute,
 			new_mapping as new_uri_mapping
-		select
-			default_create
 		end
 
 	WSF_RESOURCE_HANDLER_HELPER
@@ -25,24 +23,12 @@ inherit
 
 	SHARED_EJSON
 
-	USER_MANAGER
-		rename
-			default_create as urm_default_create
-		end
+	SHARED_DATABASE_API
 
 	REFACTORING_HELPER
 
 	GRAPHVIZ_SERVER_URI_TEMPLATES
 
-create
-	make
-
-feature -- Initialization
-
-	make
-		do
-			urm_default_create
-		end
 
 feature -- execute
 
@@ -109,9 +95,9 @@ feature --HTTP Methods
 					--| Here maybe we need to verify if the save action
 					--| was succesful or not, if not was successfull, we need to
 					--| send a 50x error.
-				if not exist_user_name (l_user.user_name) then
-					insert (l_user)
-					l_user.set_id (last_row_id.to_integer_32)
+				if not user_dao.exist_user_name (l_user.user_name) then
+					user_dao.insert (l_user)
+					l_user.set_id (user_dao.last_row_id.to_integer_32)
 					compute_response_post (req, res, l_user)
 				else
 					if attached json_to_cj (collection_json_root (req)) as l_cj then
