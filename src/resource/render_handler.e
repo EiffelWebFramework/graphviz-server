@@ -35,7 +35,20 @@ inherit
 	GRAPHVIZ_SERVER_URI_TEMPLATES
 
 	PROCESS_HELPER
+	WSF_SELF_DOCUMENTED_HANDLER
 
+feature -- Documentation
+
+	mapping_documentation (m: WSF_ROUTER_MAPPING): WSF_ROUTER_MAPPING_DOCUMENTATION
+		do
+			create Result.make (m)
+			if attached {WSF_URI_TEMPLATE_MAPPING} m as l_uri_tpl then
+				Result.add_description ("Render graph according to parameters%N")
+				Result.add_description ("id: Graph's unique identifier%N")
+				Result.add_description ("type: Rendering type")
+			end
+		end
+		
 feature -- execute
 
 	uri_execute (req: WSF_REQUEST; res: WSF_RESPONSE)
