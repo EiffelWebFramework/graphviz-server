@@ -80,7 +80,8 @@ feature {NONE} -- Initialization
 			router.map_with_request_methods (create {WSF_URI_MAPPING}.make_trailing_slash_ignored (user_register_uri, user_register_handler), router.methods_GET_POST)
 
 				-- login a user
-			router.handle_with_request_methods (user_login_uri, user_login_authentication_filter, router.methods_GET)
+			router.map_with_request_methods (create {WSF_URI_CONTEXT_MAPPING [FILTER_HANDLER_CONTEXT]}.make_trailing_slash_ignored (user_login_uri, user_login_authentication_filter), router.methods_GET_POST)
+--			router.handle_with_request_methods (user_login_uri, user_login_authentication_filter, router.methods_GET_POST)
 
 				--| Weird behavior the order of handler affect the selection
 				--|/graph/{id} should be handled by graph
@@ -105,6 +106,9 @@ feature {NONE} -- Initialization
 				-- user_graph handler
 			router.handle_with_request_methods (user_graph_uri.template, user_graph_authentication_filter, router.methods_GET_POST)
 			router.handle_with_request_methods (user_graph_id_uri_template.template, user_graph_authentication_filter, router.methods_GET_PUT_DELETE)
+
+			router.handle_with_request_methods ("/doc", create {WSF_ROUTER_SELF_DOCUMENTATION_HANDLER}.make_hidden (router), router.methods_GET)
+
 			create l_routing_filter.make (router)
 			l_routing_filter.set_execute_default_action (agent execute_default)
 			filter := l_routing_filter
@@ -171,9 +175,9 @@ feature -- Execution
 
 				h.put_header_key_value ({HTTP_HEADER_NAMES}.header_allow, l_allow)
 				res.set_status_code ({HTTP_STATUS_CODE}.method_not_allowed)
-	        else
-	        	res.set_status_code ({HTTP_STATUS_CODE}.not_found)
-	        end
+			else
+				res.set_status_code ({HTTP_STATUS_CODE}.not_found)
+			end
 			h.put_current_date
 			res.put_header_text (h.string)
 			if attached json.value (l_cj) as l_cj_answer then

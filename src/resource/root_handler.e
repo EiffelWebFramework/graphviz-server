@@ -26,6 +26,16 @@ inherit
 
 	COLLECTION_JSON_HELPER
 
+	WSF_SELF_DOCUMENTED_HANDLER
+
+feature -- Documentation
+
+	mapping_documentation (m: WSF_ROUTER_MAPPING): WSF_ROUTER_MAPPING_DOCUMENTATION
+		do
+			create Result.make (m)
+			Result.add_description ("Main entry point")
+		end
+
 feature -- execute
 
 	uri_execute (req: WSF_REQUEST; res: WSF_RESPONSE)
@@ -72,8 +82,6 @@ feature --HTTP Methods
 			res.put_header_text (h.string)
 			res.put_string (l_msg)
 		end
-
-
 
 note
 	copyright: "2011-2012, Javier Velilla and others"
