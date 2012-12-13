@@ -28,6 +28,7 @@ feature {NONE} -- Initialization
 	make
 		local
 		do
+			initialize_router
 			initialize_filter
 			initialize_graphviz
 			create {WSF_SERVICE_LAUNCHER_OPTIONS_FROM_INI} service_options.make_from_file ("server.ini")
@@ -37,7 +38,6 @@ feature {NONE} -- Initialization
 	create_filter
 			--option1
 		local
-			router: WSF_ROUTER
 			render_handler: RENDER_HANDLER
 			root_handler: ROOT_HANDLER
 			graph_handler: GRAPH_HANDLER
@@ -50,7 +50,6 @@ feature {NONE} -- Initialization
 			user_graph_authentication_filter: AUTHENTICATION_FILTER
 			l_routing_filter: WSF_ROUTING_FILTER
 		do
-			create router.make (10)
 			create root_handler
 			create render_handler
 			create user_register_handler
@@ -81,7 +80,7 @@ feature {NONE} -- Initialization
 			router.map_with_request_methods (create {WSF_URI_MAPPING}.make_trailing_slash_ignored (user_register_uri, user_register_handler), router.methods_GET_POST)
 
 				-- login a user
-			router.handle_with_request_methods (user_login_uri, user_login_authentication_filter, router.methods_GET_POST)
+			router.handle_with_request_methods (user_login_uri, user_login_authentication_filter, router.methods_GET)
 
 				--| Weird behavior the order of handler affect the selection
 				--|/graph/{id} should be handled by graph
@@ -120,6 +119,20 @@ feature {NONE} -- Initialization
 			filter.set_next (l_logging_filter)
 		end
 
+	initialize_router
+			-- Initialize router
+		do
+			create router.make (10)
+		ensure
+			router_created: router /= Void
+		end
+
+feature -- Access
+
+	router: WSF_ROUTER
+			-- Router used to dispatch the request according to the WSF_REQUEST object
+			-- and associated request methods		
+
 feature -- Execution
 
 	execute (req: WSF_REQUEST; res: WSF_RESPONSE)
@@ -130,11 +143,12 @@ feature -- Execution
 	execute_default (req: WSF_REQUEST; res: WSF_RESPONSE)
 			-- I'm using this method to handle the method not allowed response
 			-- in the case that the given uri does not have a corresponding http method
-			-- to handle it.
+			-- to handle it, or the resource is not found in the server
 		local
 			h: HTTP_HEADER
 			l_description: STRING
 			l_cj : CJ_COLLECTION
+			l_allow : STRING
 		do
 			initialize_converters (json)
 			if req.content_length_value > 0 then
@@ -146,8 +160,21 @@ feature -- Execution
 			l_description := req.request_method + req.request_uri + " is not allowed" + "%N"
 			l_cj.set_error ( new_error ("Method not allowed", "002", l_description))
 
+			if router.has_item_associated_with_resource (req.request_uri, Void) then
+
+				create l_allow.make_empty
+				across router.allowed_methods_for_request (req) as c loop
+					l_allow.append (c.item)
+					l_allow.append (",")
+				end
+				l_allow.remove_tail (1)
+
+				h.put_header_key_value ({HTTP_HEADER_NAMES}.header_allow, l_allow)
+				res.set_status_code ({HTTP_STATUS_CODE}.method_not_allowed)
+	        else
+	        	res.set_status_code ({HTTP_STATUS_CODE}.not_found)
+	        end
 			h.put_current_date
-			res.set_status_code ({HTTP_STATUS_CODE}.method_not_allowed)
 			res.put_header_text (h.string)
 			if attached json.value (l_cj) as l_cj_answer then
 				h.put_content_length (l_cj_answer.representation.count)
