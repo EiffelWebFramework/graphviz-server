@@ -21,13 +21,12 @@ inherit
 			do_post
 		end
 
-	SHARED_EJSON
 
 	SHARED_DATABASE_API
 
 	REFACTORING_HELPER
 
-	GRAPHVIZ_SERVER_URI_TEMPLATES
+	COLLECTION_JSON_HELPER
 
 
 feature -- execute
@@ -75,6 +74,24 @@ feature --HTTP Methods
 			res.put_string (l_msg)
 		end
 
+	compute_response (req: WSF_REQUEST; res: WSF_RESPONSE; msg: STRING; status_code: INTEGER)
+		local
+			h: HTTP_HEADER
+			l_msg: STRING
+		do
+			create h.make
+			h.put_content_type ("application/vnd.collection+json")
+			l_msg := msg
+			h.put_content_length (l_msg.count)
+			if attached req.request_time as time then
+				h.put_utc_date (time)
+			end
+			res.set_status_code (status_code)
+			res.put_header_text (h.string)
+			res.put_string (l_msg)
+		end
+
+
 	do_post (req: WSF_REQUEST; res: WSF_RESPONSE)
 			-- Here the convention is the following.
 			-- POST is used for creation and the server determines the URI
@@ -87,6 +104,7 @@ feature --HTTP Methods
 		local
 			l_post: STRING
 			cj_error: CJ_ERROR
+			l_cj : CJ_COLLECTION
 		do
 			l_post := retrieve_data (req)
 			if attached {USER} extract_cj_request (l_post) as l_user then
@@ -100,17 +118,21 @@ feature --HTTP Methods
 					l_user.set_id (user_dao.last_row_id.to_integer_32)
 					compute_response_post (req, res, l_user)
 				else
-					if attached json_to_cj (collection_json_root (req)) as l_cj then
-						--| if the user name already exist we send the error in the error object in the collection json.
-						create cj_error.make ("User name exist", "001", "The user name " + l_user.user_name + " already exist in the system, it should be unique")
-						l_cj.set_error (cj_error)
-						if attached json.value (l_cj) as l_cj_answer then
-							compute_response_post_error (req, res, l_cj_answer.representation)
-						end
+					l_cj := collection_json_root_builder (req)
+					--| if the user name already exist we send the error in the error object in the collection json.
+					l_cj.set_error (new_error ("User name exist", "001", "The user name " + l_user.user_name + " already exist in the system, it should be unique"))
+					if attached json.value (l_cj) as l_cj_answer then
+						compute_response (req, res, l_cj_answer.representation,{HTTP_STATUS_CODE}.conflict)
 					end
+
 				end
 			else
-				handle_bad_request_response (l_post + "%N is not a valid user", req, res)
+				l_cj := collection_json_root_builder (req)
+				--| if the user name already exist we send the error in the error object in the collection json.
+				l_cj.set_error (new_error ("Bad request", "004", "The template : "+ l_post + " is not valid"  ))
+				if attached json.value (l_cj) as l_cj_answer then
+					compute_response (req, res, l_cj_answer.representation,{HTTP_STATUS_CODE}.bad_request)
+				end
 			end
 		end
 
@@ -147,48 +169,6 @@ feature --HTTP Methods
 			res.put_header_text (h.string)
 		end
 
-feature -- Collection JSON support
-
-	initialize_converters (j: like json)
-			-- Initialize json converters
-		do
-			j.add_converter (create {CJ_COLLECTION_JSON_CONVERTER}.make)
-			json.add_converter (create {CJ_DATA_JSON_CONVERTER}.make)
-			j.add_converter (create {CJ_ERROR_JSON_CONVERTER}.make)
-			j.add_converter (create {CJ_ITEM_JSON_CONVERTER}.make)
-			j.add_converter (create {CJ_QUERY_JSON_CONVERTER}.make)
-			j.add_converter (create {CJ_TEMPLATE_JSON_CONVERTER}.make)
-			j.add_converter (create {CJ_LINK_JSON_CONVERTER}.make)
-			if j.converter_for (create {ARRAYED_LIST [detachable ANY]}.make (0)) = Void then
-				j.add_converter (create {CJ_ARRAYED_LIST_JSON_CONVERTER}.make)
-			end
-		end
-
-	json_to_cj_template (post: STRING): detachable CJ_TEMPLATE
-		local
-			parser: JSON_PARSER
-		do
-			initialize_converters (json)
-			create parser.make_parser (post)
-			if attached parser.parse_object as cj and parser.is_parsed then
-				if attached {CJ_TEMPLATE} json.object (cj.item ("template"), "CJ_TEMPLATE") as l_col then
-					Result := l_col
-				end
-			end
-		end
-
-	json_to_cj (req: STRING): detachable CJ_COLLECTION
-		local
-			parser: JSON_PARSER
-		do
-			initialize_converters (json)
-			create parser.make_parser (req)
-			if attached parser.parse as jv then
-				if attached {CJ_COLLECTION} json.object (jv, "CJ_COLLECTION") as l_col then
-					Result := l_col
-				end
-			end
-		end
 
 	extract_cj_request (l_post: STRING): detachable USER
 			-- extract an object User from the request, or Void
@@ -214,35 +194,7 @@ feature -- Collection JSON support
 			end
 		end
 
-	collection_json_root (req: WSF_REQUEST): STRING
-		do
-			create Result.make_from_string (collection_json_root_tpl)
-			Result.replace_substring_all ("$HOME_URL", req.absolute_script_url (home_uri))
-		end
 
-	collection_json_root_tpl: STRING = "[
-					{
-			   	 "collection": {
-			        "items": [],
-			        "links": [
-			           {
-			                "href": "$HOME_URL",
-			                "prompt": "Home Graph",
-			                "rel": "Home"
-			            }
-			        ],
-			        "queries": [],
-			        "template":{
-			    		   "data" :
-			       				 [
-			        			{"name" : "User Name", "value" : "","prompt" :"User Name"},
-			        			{"name" : "Password", "value" : "", "prompt" : "Password"}
-			        	 ]
-			   			},
-			        "version": "1.0"
-			    	}
-				}
-		]"
 
 note
 	copyright: "2011-2012, Javier Velilla and others"

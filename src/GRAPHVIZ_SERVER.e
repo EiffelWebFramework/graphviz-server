@@ -36,13 +36,12 @@ feature {NONE} -- Initialization
 		end
 
 	create_filter
-			--option1
 		local
 			render_handler: RENDER_HANDLER
 			root_handler: ROOT_HANDLER
 			graph_handler: GRAPH_HANDLER
-			user_register_handler: USER_REGISTER_HANDLER
-			user_login_handler: USER_LOGIN_HANDLER
+			register_handler: USER_REGISTER_HANDLER
+			login_handler: USER_LOGIN_HANDLER
 			user_graph_handler: USER_GRAPH_HANDLER
 			user_handler: USER_HANDLER
 			user_login_authentication_filter: AUTHENTICATION_FILTER
@@ -52,15 +51,15 @@ feature {NONE} -- Initialization
 		do
 			create root_handler
 			create render_handler
-			create user_register_handler
+			create register_handler
 			create user_graph_handler
-			create user_login_handler
+			create login_handler
 			create user_handler
 			create graph_handler
 
 				-- user login authentication filter
 			create user_login_authentication_filter
-			user_login_authentication_filter.set_next (user_login_handler)
+			user_login_authentication_filter.set_next (login_handler)
 
 				-- user authentication filter
 			create user_authentication_filter
@@ -77,11 +76,10 @@ feature {NONE} -- Initialization
 			router.map_with_request_methods (create {WSF_URI_MAPPING}.make ("/", root_handler), router.methods_GET)
 
 				-- register a user
-			router.map_with_request_methods (create {WSF_URI_MAPPING}.make_trailing_slash_ignored (user_register_uri, user_register_handler), router.methods_GET_POST)
+			router.map_with_request_methods (create {WSF_URI_MAPPING}.make_trailing_slash_ignored (register_uri, register_handler), router.methods_GET_POST)
 
 				-- login a user
-			router.map_with_request_methods (create {WSF_URI_CONTEXT_MAPPING [FILTER_HANDLER_CONTEXT]}.make_trailing_slash_ignored (user_login_uri, user_login_authentication_filter), router.methods_GET_POST)
---			router.handle_with_request_methods (user_login_uri, user_login_authentication_filter, router.methods_GET_POST)
+			router.map_with_request_methods (create {WSF_URI_CONTEXT_MAPPING [FILTER_HANDLER_CONTEXT]}.make_trailing_slash_ignored (login_uri, user_login_authentication_filter), router.methods_GET)
 
 				--| Weird behavior the order of handler affect the selection
 				--|/graph/{id} should be handled by graph
@@ -161,8 +159,7 @@ feature -- Execution
 			create h.make
 			h.put_content_type ("application/vnd.collection+json")
 			l_cj := collection_json_root_builder (req)
-			l_description := req.request_method + req.request_uri + " is not allowed" + "%N"
-			l_cj.set_error ( new_error ("Method not allowed", "002", l_description))
+
 
 			if router.has_item_associated_with_resource (req.request_uri, Void) then
 
@@ -172,10 +169,14 @@ feature -- Execution
 					l_allow.append (",")
 				end
 				l_allow.remove_tail (1)
+				l_description := req.request_method + req.request_uri + " is not allowed" + "%N"
+				l_cj.set_error ( new_error ("Method not allowed", "002", l_description))
 
 				h.put_header_key_value ({HTTP_HEADER_NAMES}.header_allow, l_allow)
 				res.set_status_code ({HTTP_STATUS_CODE}.method_not_allowed)
 			else
+				l_description := req.request_method + req.request_uri + " is not found" + "%N"
+				l_cj.set_error ( new_error ("Method not found", "005", l_description))
 				res.set_status_code ({HTTP_STATUS_CODE}.not_found)
 			end
 			h.put_current_date
