@@ -160,14 +160,12 @@ feature -- Execution
 			h.put_content_type ("application/vnd.collection+json")
 			l_cj := collection_json_root_builder (req)
 
-
-			if router.has_item_associated_with_resource (req.request_uri, Void) then
-
-				create l_allow.make_empty
-				across router.allowed_methods_for_request (req) as c loop
+			create l_allow.make_empty
+			across router.allowed_methods_for_request (req) as c loop
 					l_allow.append (c.item)
 					l_allow.append (",")
-				end
+			end
+			if not l_allow.is_empty then
 				l_allow.remove_tail (1)
 				l_description := req.request_method + req.request_uri + " is not allowed" + "%N"
 				l_cj.set_error ( new_error ("Method not allowed", "002", l_description))

@@ -120,7 +120,7 @@ feature --HTTP Methods
 				else
 					l_cj := collection_json_root_builder (req)
 					--| if the user name already exist we send the error in the error object in the collection json.
-					l_cj.set_error (new_error ("User name exist", "001", "The user name " + l_user.user_name + " already exist in the system, it should be unique"))
+					l_cj.set_error (new_error ("User name exist", "007", "The user name " + l_user.user_name + " already exist in the system, it should be unique"))
 					if attached json.value (l_cj) as l_cj_answer then
 						compute_response (req, res, l_cj_answer.representation,{HTTP_STATUS_CODE}.conflict)
 					end
@@ -129,7 +129,7 @@ feature --HTTP Methods
 			else
 				l_cj := collection_json_root_builder (req)
 				--| if the user name already exist we send the error in the error object in the collection json.
-				l_cj.set_error (new_error ("Bad request", "004", "The template : "+ l_post + " is not valid"  ))
+				l_cj.set_error (new_error ("Bad request", "005", "The template : "+l_post + " is not valid"  ))
 				if attached json.value (l_cj) as l_cj_answer then
 					compute_response (req, res, l_cj_answer.representation,{HTTP_STATUS_CODE}.bad_request)
 				end

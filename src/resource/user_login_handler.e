@@ -55,7 +55,7 @@ feature --HTTP Methods
 					compute_response_get (req, res, a_user)
 				else
 					if attached json_to_cj (collection_json_user (req, 0)) as a_cj then
-						a_cj.set_error (new_error ("User name does not exist or the password is wrong", "002", "The user name " + l_user.user_name + " not exist in the system or the password was wrong, try again"))
+						a_cj.set_error (new_error ("User name does not exist or the password is wrong", "005", "The user name " + l_user.user_name + " not exist in the system or the password was wrong, try again"))
 						if attached json.value (a_cj) as l_cj_answer then
 							compute_response (req, res,l_cj_answer.representation, {HTTP_STATUS_CODE}.bad_request)
 						end
@@ -63,7 +63,7 @@ feature --HTTP Methods
 				end
 			else
 				l_cj := collection_json_root_builder (req)
-				l_cj.set_error (new_error ("Bad Request", "004", "User does not exist"))
+				l_cj.set_error (new_error ("Bad Request", "005", "User does not exist"))
 				if attached json.value (l_cj) as l_cj_answer then
 					compute_response (req, res, l_cj_answer.representation, {HTTP_STATUS_CODE}.bad_request)
 				end

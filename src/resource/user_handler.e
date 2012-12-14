@@ -68,7 +68,7 @@ feature -- HTTP Methods
 				end
 			else
 				l_cj := collection_json_root_builder (req)
-				l_cj.set_error (new_error ("Not found", "004", "You try to access the user " + req.request_uri + " and it does not exist in the system"))
+				l_cj.set_error (new_error ("Resource Not found", "001", "You try to access the user " + req.request_uri + " and it does not exist in the system"))
 				if attached json.value (l_cj) as l_cj_answer then
 					compute_response_get (req, res, l_cj_answer.representation, {HTTP_STATUS_CODE}.not_found)
 				end
