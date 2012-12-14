@@ -14,9 +14,9 @@ feature -- Access: collection
 
 	user_uri: STRING = "/user"
 
-	user_register_uri: STRING = "/user/register"
+	register_uri: STRING = "/register"
 
-	user_login_uri: STRING = "/user/login"
+	login_uri: STRING = "/login"
 
 
 

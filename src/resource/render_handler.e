@@ -32,9 +32,10 @@ inherit
 
 	GRAPHVIZ_FORMATS
 
-	GRAPHVIZ_SERVER_URI_TEMPLATES
+	COLLECTION_JSON_HELPER
 
 	PROCESS_HELPER
+
 	WSF_SELF_DOCUMENTED_HANDLER
 
 feature -- Documentation
@@ -48,7 +49,7 @@ feature -- Documentation
 				Result.add_description ("type: Rendering type")
 			end
 		end
-		
+
 feature -- execute
 
 	uri_execute (req: WSF_REQUEST; res: WSF_RESPONSE)
@@ -80,45 +81,83 @@ feature --HTTP Methods
 			-- 404 Resource not found
 		local
 			m: STRING
+			l_cj: CJ_COLLECTION
 		do
+				--|TODO refactor code, too complex
 			if attached {WSF_STRING} req.path_parameter ("uid") as l_id and then l_id.is_integer and then attached {WSF_STRING} req.path_parameter ("gid") as g_id and then g_id.is_integer and then attached {WSF_STRING} req.path_parameter ("type") as l_type then
-				if attached graph_dao.retrieve_by_id_and_user_id (g_id.integer_value, l_id.integer_value) as l_graph then
-					if is_supported (l_type.value) then
-						build_graph (l_graph, l_id.integer_value, l_type.value)
-						compute_response_get (req, res, l_id.value, g_id.value, l_type.value)
-					else
-						m := "Format [" + l_type.value + "] is not supported. Try one of the following: "
-						across
-							supported_formats as c
-						loop
-							m.append (c.item)
-							m.append_character (' ')
-						end
-						handle_bad_request_response (m, req, res)
-					end
-				else
-					handle_resource_not_found_response ("Graph not found", req, res)
-				end
+				process_graph_render_with_user (req, res, l_type, g_id.integer_value, l_id.integer_value)
 			elseif attached {WSF_STRING} req.path_parameter ("id") as l_id and then l_id.is_integer and then attached {WSF_STRING} req.path_parameter ("type") as l_type then
-				if attached graph_dao.retrieve_by_id (l_id.integer_value) as l_graph then
-					if is_supported (l_type.value) then
-						build_graph (l_graph, 0, l_type.value)
-						compute_response_get (req, res, "0", l_id.value, l_type.value)
-					else
-						m := "Format [" + l_type.value + "] is not supported. Try one of the following: "
-						across
-							supported_formats as c
-						loop
-							m.append (c.item)
-							m.append_character (' ')
-						end
-						handle_bad_request_response (m, req, res)
-					end
+				process_graph_render (req, res, l_type, l_id.integer_value)
+			else
+				l_cj := collection_json_root_builder (req)
+				l_cj.set_error (new_error ("Resource Not found", "001", "Graph not found"))
+				if attached json.value (l_cj) as l_cj_answer then
+					compute_response (req, res, l_cj_answer.representation, {HTTP_STATUS_CODE}.not_found)
+				end
+			end
+		end
+
+	process_graph_render_with_user (req: WSF_REQUEST; res: WSF_RESPONSE; type: WSF_STRING; gid: INTEGER; uid: INTEGER)
+		local
+			m: STRING
+			l_cj: CJ_COLLECTION
+		do
+			if attached graph_dao.retrieve_by_id_and_user_id (gid, uid) as l_graph then
+				if is_supported (type.value) then
+					build_graph (l_graph, uid, type.value)
+					compute_response_get (req, res, uid.out, gid.out, type.value)
 				else
-					handle_resource_not_found_response ("Graph not found", req, res)
+					m := "Format [" + type.value + "] is not supported. Try one of the following: "
+					across
+						supported_formats as c
+					loop
+						m.append (c.item)
+						m.append_character (' ')
+					end
+					l_cj := collection_json_root_builder (req)
+					l_cj.set_error (new_error ("Bad request", "005", "Bad request"))
+					if attached json.value (l_cj) as l_cj_answer then
+						compute_response (req, res, l_cj_answer.representation, {HTTP_STATUS_CODE}.bad_request)
+					end
 				end
 			else
-				handle_resource_not_found_response ("Graph not found", req, res)
+				l_cj := collection_json_root_builder (req)
+				l_cj.set_error (new_error ("Resource Not found", "001", "Graph not found"))
+				if attached json.value (l_cj) as l_cj_answer then
+					compute_response (req, res, l_cj_answer.representation, {HTTP_STATUS_CODE}.not_found)
+				end
+			end
+		end
+
+	process_graph_render (req: WSF_REQUEST; res: WSF_RESPONSE; type: WSF_STRING; gid: INTEGER)
+		local
+			l_cj : CJ_COLLECTION
+			m : STRING
+		do
+			if attached graph_dao.retrieve_by_id (gid) as l_graph then
+				if is_supported (type.value) then
+					build_graph (l_graph, 0, type.value)
+					compute_response_get (req, res, "0", gid.out, type.value)
+				else
+					m := "Format [" + type.value + "] is not supported. Try one of the following: "
+					across
+						supported_formats as c
+					loop
+						m.append (c.item)
+						m.append_character (' ')
+					end
+					l_cj := collection_json_root_builder (req)
+					l_cj.set_error (new_error ("Bad request", "005", "Bad request"))
+					if attached json.value (l_cj) as l_cj_answer then
+						compute_response (req, res, l_cj_answer.representation, {HTTP_STATUS_CODE}.bad_request)
+					end
+				end
+			else
+				l_cj := collection_json_root_builder (req)
+				l_cj.set_error (new_error ("Resource Not found", "001", "Graph not found"))
+				if attached json.value (l_cj) as l_cj_answer then
+					compute_response (req, res, l_cj_answer.representation, {HTTP_STATUS_CODE}.not_found)
+				end
 			end
 		end
 
@@ -128,6 +167,7 @@ feature --HTTP Methods
 			l_msg: STRING
 			f: RAW_FILE
 			fn: FILE_NAME
+			l_cj: CJ_COLLECTION
 		do
 			l_msg := ""
 			create fn.make_from_string (document_root)
@@ -148,39 +188,30 @@ feature --HTTP Methods
 				res.put_header_text (h.string)
 				res.put_string (l_msg)
 			else
-				handle_internal_server_error ("Unable to generate output %"" + type + "%" for graph %"" + gid.out + "%".", req, res)
+				l_cj := collection_json_root_builder (req)
+				l_cj.set_error (new_error ("Internal Server Error", "006", "Unable to generate output %"" + type + "%" for graph %"" + gid.out + "%"."))
+				if attached json.value (l_cj) as l_cj_answer then
+					compute_response (req, res, l_cj_answer.representation, {HTTP_STATUS_CODE}.internal_server_error)
+				end
 			end
 		end
 
-	collection_json_root (req: WSF_REQUEST): STRING
+	compute_response (req: WSF_REQUEST; res: WSF_RESPONSE; msg: STRING; status_code: INTEGER)
+		local
+			h: HTTP_HEADER
+			l_msg: STRING
 		do
-			create Result.make_from_string (collection_json_root_tpl)
-			Result.replace_substring_all ("$GRAPH_URL", req.absolute_script_url (graph_uri))
-			Result.replace_substring_all ("$USER_URL", req.absolute_script_url (user_uri))
+			create h.make
+			h.put_content_type ("application/vnd.collection+json")
+			l_msg := msg
+			h.put_content_length (l_msg.count)
+			if attached req.request_time as time then
+				h.put_utc_date (time)
+			end
+			res.set_status_code (status_code)
+			res.put_header_text (h.string)
+			res.put_string (l_msg)
 		end
-
-	collection_json_root_tpl: STRING = "[
-				{
-			   	 "collection": {
-			        "items": [],
-			        "links": [
-			            {
-			                "href": "$GRAPH_URL",
-			                "prompt": "Graph List",
-			                "rel": "Graph"
-			            },
-			            {
-			                "href": "$USER_URL",
-			                "prompt": "User List",
-			                "rel": "Users"
-			            }
-			        ],
-			        "queries": [],
-			        "templates": [],
-			        "version": "1.0"
-			    	}
-				}
-		]"
 
 feature -- Htdocs
 

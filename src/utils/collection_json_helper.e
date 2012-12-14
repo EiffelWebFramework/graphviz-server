@@ -92,8 +92,8 @@ feature -- Collection + JSON
 	collection_json_root (req: WSF_REQUEST): STRING
 		do
 			create Result.make_from_string (collection_json_root_tpl)
-			Result.replace_substring_all ("$USER_REGISTER_URL", req.absolute_script_url (user_register_uri))
-			Result.replace_substring_all ("$USER_LOGIN_URL", req.absolute_script_url (user_login_uri))
+			Result.replace_substring_all ("$USER_REGISTER_URL", req.absolute_script_url (register_uri))
+			Result.replace_substring_all ("$USER_LOGIN_URL", req.absolute_script_url (login_uri))
 			Result.replace_substring_all ("$GRAPH_URL", req.absolute_script_url (graph_uri))
 		end
 
@@ -139,11 +139,11 @@ feature -- Collection + JSON
 			lnk.set_prompt ("Home Graph")
 			lnk.set_rel ("home")
 			col.add_link (lnk)
-			create lnk.make (req.absolute_script_url (user_register_uri), "User Register")
+			create lnk.make (req.absolute_script_url (register_uri), "User Register")
 			lnk.set_prompt ("User Register")
 			lnk.set_rel("register")
 			col.add_link (lnk)
-			create lnk.make (req.absolute_script_url (user_login_uri), "User Login")
+			create lnk.make (req.absolute_script_url (login_uri), "User Login")
 			lnk.set_prompt ("User Login")
 			lnk.set_rel("login")
 			col.add_link (lnk)

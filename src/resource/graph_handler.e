@@ -63,8 +63,6 @@ feature -- HTTP Methods
 			-- 200 OK, and a representation of the root collection JSON
 			-- If the GET request is not SUCCESS, we response with
 			-- 404 Resource not found and their corresponding error in collection json
-		local
-			cj_error: CJ_ERROR
 		do
 				--| TODO refactor code.
 				--| GET need to handle two different kind of request now.

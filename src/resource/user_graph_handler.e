@@ -183,7 +183,7 @@ feature -- HTTP Methods
 				end
 			else
 				l_cj := collection_json_root_builder (req)
-				l_cj.set_error (new_error ("Bad request", "003", l_post + "%N is not a valid Graph"))
+				l_cj.set_error (new_error ("Bad request", "005", l_post + "%N is not a valid Graph"))
 				if attached json.value (l_cj) as l_cj_answer then
 					compute_response (req, res, l_cj_answer.representation, {HTTP_STATUS_CODE}.bad_request)
 				end
@@ -235,7 +235,7 @@ feature -- HTTP Methods
 					end
 				else
 						l_cj := collection_json_root_builder (req)
-						l_cj.set_error (new_error ("Resource not found", "003", "Resource " + req.request_uri + " not found "))
+						l_cj.set_error (new_error ("Resource not found", "001", "Resource " + req.request_uri + " not found "))
 						if attached json.value (l_cj) as l_cj_answer then
 							compute_response (req, res, l_cj_answer.representation, {HTTP_STATUS_CODE}.not_found)
 						end
@@ -285,7 +285,7 @@ feature -- HTTP Methods
 							compute_response_put (req, res)
 						else
 								l_cj := collection_json_root_builder (req)
-								l_cj.set_error (new_error ("Resource not found", "003", orig_path + " not found"))
+								l_cj.set_error (new_error ("Resource not found", "001", orig_path + " not found"))
 								if attached json.value (l_cj) as l_cj_answer then
 									compute_response (req, res, l_cj_answer.representation, {HTTP_STATUS_CODE}.not_found)
 								end
