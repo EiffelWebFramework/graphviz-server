@@ -29,11 +29,7 @@
 		<library name="http_authorization" location="$EWF_HOME\library\server\authentication\http_authorization\http_authorization-safe.ecf" readonly="false"/>
 		<library name="collection_json" location="$CJ_HOME\library\cj-safe.ecf" readonly="false"/>
 		<library name="sqlite" location="$ISE_LIBRARY\unstable\library\persistency\database\sqlite3\sqlite-safe.ecf" readonly="false"/>	
-		<library name="process" location="$ISE_LIBRARY\library\process\process-safe.ecf">
-			<condition>
-				<platform value="windows"/>
-			</condition>
-		</library>
+                <library name="process" location="$ISE_LIBRARY\library\process\process-safe.ecf"/>
 		<cluster name="src" location="src\" recursive="true"/>
 	</target>
 </system>
