@@ -67,6 +67,60 @@ feature -- Query
 			Result := last_retrieve_by_id_result
 		end
 
+	retrieve_page (index : INTEGER; offset : INTEGER): detachable LIST [GRAPH]
+			-- retrive page graphs per index and offset.
+		local
+			l_query: SQLITE_QUERY_STATEMENT
+		do
+				-- clean all the previous results
+			create {ARRAYED_LIST [GRAPH]} last_retrieve_page_result.make (0)
+
+				-- Query the contents of the Example table
+			create l_query.make ("SELECT graph_id,description,title,content FROM GRAPHS LIMIT :INDEX , :OFFSET;", db_mgr)
+			check
+				l_query_is_compiled: l_query.is_compiled
+			end
+			l_query.execute_with_arguments (agent  (ia_row: SQLITE_RESULT_ROW): BOOLEAN
+				local
+					l_graph: GRAPH
+					l_descr: detachable STRING_32
+					l_title: detachable STRING_32
+				do
+					if not ia_row.is_null (2) then
+						l_descr := ia_row.string_value (2).to_string_32
+					end
+					if not ia_row.is_null (3) then
+						l_title := ia_row.string_value (3).to_string_32
+					end
+					create l_graph.make (ia_row.string_value (4).to_string_32, l_title, l_descr)
+					l_graph.set_id (ia_row.integer_value (1))
+					if attached last_retrieve_page_result as lrq then
+						lrq.force (l_graph)
+					end
+				end,[create {SQLITE_INTEGER_ARG}.make (":INDEX", index), create {SQLITE_INTEGER_ARG}.make (":OFFSET", offset)])
+			Result := last_retrieve_page_result
+		end
+
+	retrieve_count: INTEGER
+			-- retrive the count of graphs in the db
+		local
+			l_query: SQLITE_QUERY_STATEMENT
+		do
+				-- clean all the previous results
+			create {ARRAYED_LIST [GRAPH]} last_retrieve_all_result.make (0)
+
+				-- Query the contents of the Example table
+			create l_query.make ("SELECT COUNT(*) FROM GRAPHS;", db_mgr)
+			check
+				l_query_is_compiled: l_query.is_compiled
+			end
+			l_query.execute (agent  (ia_row: SQLITE_RESULT_ROW): BOOLEAN
+				do
+					last_integer_count := ia_row.integer_value (1)
+				end)
+			Result := last_integer_count
+		end
+
 	retrieve_all: detachable LIST [GRAPH]
 			-- retrive all graphs from db_mgr
 		local
@@ -275,7 +329,11 @@ feature {NONE} -- Implementation
 
 	last_retrieve_all_result: detachable LIST [GRAPH]
 
+	last_retrieve_page_result: detachable LIST [GRAPH]
+
 	last_retrieve_by_id_result: detachable GRAPH
+
+	last_integer_count : INTEGER
 
 	imp_db_mgr: detachable SQLITE_DATABASE
 

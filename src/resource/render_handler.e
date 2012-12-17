@@ -80,7 +80,6 @@ feature --HTTP Methods
 			-- If the GET request is not SUCCESS, we response with
 			-- 404 Resource not found
 		local
-			m: STRING
 			l_cj: CJ_COLLECTION
 		do
 				--|TODO refactor code, too complex

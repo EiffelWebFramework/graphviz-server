@@ -51,41 +51,41 @@ feature --HTTP Methods
 			-- 200 OK, and a representation of the root collection JSON
 			-- If the GET request is not SUCCESS, we response with
 			-- 404 Resource not found
+		local
+			l_cj : CJ_COLLECTION
 		do
+			initialize_converters (json)
 			if attached req.orig_path_info as orig_path then
-				compute_response_get (req, res)
+			    l_cj := collection_json_minimal_builder (req)
+			    l_cj.add_link (new_link (req.absolute_script_url (home_uri), "home","Home API",Void,Void))
+				l_cj.add_link (new_link (req.absolute_script_url (graph_uri),"graphs", "Home Graph", Void, Void))
+				l_cj.add_link (new_link (req.absolute_script_url (login_uri), "login", "User Login", Void, Void))
+			    l_cj.set_template (new_user_template(Void))
+			    if attached json.value (l_cj) as l_cj_answer then
+					compute_response (req, res, l_cj_answer.representation,{HTTP_STATUS_CODE}.ok,0)
+			    end
 			end
 		end
 
-	compute_response_get (req: WSF_REQUEST; res: WSF_RESPONSE)
-		local
-			h: HTTP_HEADER
-			l_msg: STRING
-		do
-			create h.make
-			h.put_content_type ("application/vnd.collection+json")
-			l_msg := collection_json_root (req)
-			h.put_content_length (l_msg.count)
-			if attached req.request_time as time then
-				h.put_utc_date (time)
-			end
-			res.set_status_code ({HTTP_STATUS_CODE}.ok)
-			res.put_header_text (h.string)
-			res.put_string (l_msg)
-		end
 
-	compute_response (req: WSF_REQUEST; res: WSF_RESPONSE; msg: STRING; status_code: INTEGER)
+	compute_response (req: WSF_REQUEST; res: WSF_RESPONSE; msg: STRING; status_code: INTEGER; user_id : INTEGER)
 		local
 			h: HTTP_HEADER
 			l_msg: STRING
+			l_location : STRING
 		do
 			create h.make
 			h.put_content_type ("application/vnd.collection+json")
 			l_msg := msg
+			if user_id > 0 and then status_code = {HTTP_STATUS_CODE}.created then
+				l_location := req.absolute_script_url (user_id_uri (user_id))
+				h.put_location (l_location)
+			end
 			h.put_content_length (l_msg.count)
 			if attached req.request_time as time then
 				h.put_utc_date (time)
 			end
+
 			res.set_status_code (status_code)
 			res.put_header_text (h.string)
 			res.put_string (l_msg)
@@ -100,73 +100,46 @@ feature --HTTP Methods
 			-- HTTP_RESPONSE 201 CREATED, the Location header will contains the newly created user's URI
 			-- if the request post is not SUCCESS, the server will response with
 			-- HTTP_RESPONSE 400 BAD REQUEST, the client send a bad request
+			-- if the request post is not SUCCESS, because the data in the payload is in conflic
+			-- with the current data in the server, the server will return HTTP_RESPONSE 409, CONFLIC.
 			-- HTTP_RESPONSE 500 INTERNAL_SERVER_ERROR, when the server can deliver the request
 		local
 			l_post: STRING
-			cj_error: CJ_ERROR
 			l_cj : CJ_COLLECTION
 		do
 			l_post := retrieve_data (req)
 			if attached {USER} extract_cj_request (l_post) as l_user then
-					-- save graph
-					-- return the location uri of the USER and return a 201
-					--| Here maybe we need to verify if the save action
-					--| was succesful or not, if not was successfull, we need to
-					--| send a 50x error.
 				if not user_dao.exist_user_name (l_user.user_name) then
 					user_dao.insert (l_user)
 					l_user.set_id (user_dao.last_row_id.to_integer_32)
-					compute_response_post (req, res, l_user)
+					--| Send and empty string, to meet the do_post postcondition.
+					--| Need to check CJ specification, to see how to send an body when
+					--| we are creating a new resource.
+					compute_response (req, res , " ", {HTTP_STATUS_CODE}.created, l_user.id)
 				else
-					l_cj := collection_json_root_builder (req)
-					--| if the user name already exist we send the error in the error object in the collection json.
+					l_cj := collection_json_minimal_builder (req)
+					l_cj.add_link (new_link (req.absolute_script_url (home_uri), "home","Home API",Void,Void))
+					l_cj.add_link (new_link (req.absolute_script_url (graph_uri),"graphs", "Home Graph", Void, Void))
+					l_cj.add_link (new_link (req.absolute_script_url (login_uri), "login", "User Login", Void, Void))
 					l_cj.set_error (new_error ("User name exist", "007", "The user name " + l_user.user_name + " already exist in the system, it should be unique"))
+					l_cj.set_template (new_user_template(Void))
+					--| if the user name already exist we send the error in the error object in the collection json.
 					if attached json.value (l_cj) as l_cj_answer then
-						compute_response (req, res, l_cj_answer.representation,{HTTP_STATUS_CODE}.conflict)
+						compute_response (req, res, l_cj_answer.representation,{HTTP_STATUS_CODE}.conflict,0)
 					end
 
 				end
 			else
-				l_cj := collection_json_root_builder (req)
-				--| if the user name already exist we send the error in the error object in the collection json.
+				l_cj := collection_json_minimal_builder (req)
+				l_cj.add_link (new_link (req.absolute_script_url (home_uri), "home","Home API",Void,Void))
+				l_cj.add_link (new_link (req.absolute_script_url (graph_uri),"graphs", "Home Graph", Void, Void))
+				l_cj.add_link (new_link (req.absolute_script_url (login_uri), "login", "User Login", Void, Void))
 				l_cj.set_error (new_error ("Bad request", "005", "The template : "+l_post + " is not valid"  ))
+				l_cj.set_template (new_user_template(Void))
 				if attached json.value (l_cj) as l_cj_answer then
-					compute_response (req, res, l_cj_answer.representation,{HTTP_STATUS_CODE}.bad_request)
+					compute_response (req, res, l_cj_answer.representation,{HTTP_STATUS_CODE}.bad_request,0)
 				end
 			end
-		end
-
-	compute_response_post_error (req: WSF_REQUEST; res: WSF_RESPONSE; an_answer: STRING)
-		local
-			h: HTTP_HEADER
-		do
-			create h.make
-			h.put_content_type ("application/vnd.collection+json")
-			h.put_content_length (an_answer.count)
-			if attached req.request_time as time then
-				h.put_utc_date (time)
-			end
-			res.set_status_code ({HTTP_STATUS_CODE}.bad_request)
-			res.put_header_text (h.string)
-			res.put_string (an_answer)
-		end
-
-	compute_response_post (req: WSF_REQUEST; res: WSF_RESPONSE; a_user: USER)
-		local
-			h: HTTP_HEADER
-			l_location: STRING
-		do
-				--| Here we send a response with status code 201 and the uri of
-				--| the new resource.
-			create h.make
-			h.put_content_type ("application/vnd.collection+json")
-			l_location := req.absolute_script_url (user_id_uri (a_user.id))
-			h.put_location (l_location)
-			if attached req.request_time as time then
-				h.put_utc_date (time)
-			end
-			res.set_status_code ({HTTP_STATUS_CODE}.created)
-			res.put_header_text (h.string)
 		end
 
 

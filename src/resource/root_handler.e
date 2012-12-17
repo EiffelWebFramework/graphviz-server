@@ -59,26 +59,28 @@ feature --HTTP Methods
 			-- If the GET request is not SUCCESS, we response with
 			-- 404 Resource not found
 		do
+			initialize_converters (json)
 			if attached req.orig_path_info as orig_path then
-				compute_response_get (req, res)
+				if attached json.value (collection_json_root_builder (req)) as l_cj_answer then
+					compute_response (req, res, l_cj_answer.representation, {HTTP_STATUS_CODE}.ok)
+				end
 			end
 		end
 
-	compute_response_get (req: WSF_REQUEST; res: WSF_RESPONSE)
+
+	compute_response (req: WSF_REQUEST; res: WSF_RESPONSE; msg: STRING; status_code: INTEGER)
 		local
 			h: HTTP_HEADER
 			l_msg: STRING
 		do
 			create h.make
-		    --| What about to create HTTP_VENDOR_CONTENT_TYPES?
-		    --| Maybe we can provide a facility to register new vendor content types.
 			h.put_content_type ("application/vnd.collection+json")
-			l_msg := collection_json_root (req)
+			l_msg := msg
 			h.put_content_length (l_msg.count)
 			if attached req.request_time as time then
 				h.put_utc_date (time)
 			end
-			res.set_status_code ({HTTP_STATUS_CODE}.ok)
+			res.set_status_code (status_code)
 			res.put_header_text (h.string)
 			res.put_string (l_msg)
 		end

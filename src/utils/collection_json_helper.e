@@ -21,7 +21,6 @@ feature -- Collection + JSON
 			create Result.make (a_title, a_code, a_message)
 		end
 
-
 	new_data (name: STRING_32; value: detachable STRING_32; prompt: STRING_32): CJ_DATA
 		do
 			create Result.make
@@ -97,69 +96,22 @@ feature -- Collection + JSON
 			Result.replace_substring_all ("$GRAPH_URL", req.absolute_script_url (graph_uri))
 		end
 
-	collection_json_root_builder (req: WSF_REQUEST): CJ_COLLECTION
-			--	{
-			--			   	 "collection": {
-			--			        "items": [],
-			--			        "links": [
-			--			            {
-			--			                "href": "$USER_REGISTER_URL",
-			--			                "prompt": "User Register",
-			--			                "rel": "Register"
-			--			            },
-			--			            {
-			--			                "href": "$USER_LOGIN_URL",
-			--			                "prompt": "User Login",
-			--			                "rel": "Login"
-			--			            },
-			--			             {
-			--			                "href": "$GRAPH_URL",
-			--			                "prompt": "Graph List",
-			--			                "rel": "Graph"
-			--			            }
-			--
-			--			        ],
-			--			        "queries": [],
-			--			        "templates": [],
-			--			        "version": "1.0"
-			--			    	}
-			--				}
-			--		]"
+	collection_json_minimal_builder (req: WSF_REQUEST): CJ_COLLECTION
+		do
+			create Result.make_with_href_and_version (req.absolute_script_url (req.request_uri), "1.0")
+		end
 
+	collection_json_root_builder (req: WSF_REQUEST): CJ_COLLECTION
 		local
 			col: CJ_COLLECTION
-			lnk: CJ_LINK
-			tpl: CJ_TEMPLATE
-			d: CJ_DATA
 		do
-			create col.make_with_href_and_version (req.absolute_script_url (req.request_uri), "1.0")
+			col := collection_json_minimal_builder (req)
 
 				-- Links
-			create lnk.make (req.absolute_script_url (home_uri), "Home")
-			lnk.set_prompt ("Home Graph")
-			lnk.set_rel ("home")
-			col.add_link (lnk)
-			create lnk.make (req.absolute_script_url (register_uri), "User Register")
-			lnk.set_prompt ("User Register")
-			lnk.set_rel("register")
-			col.add_link (lnk)
-			create lnk.make (req.absolute_script_url (login_uri), "User Login")
-			lnk.set_prompt ("User Login")
-			lnk.set_rel("login")
-			col.add_link (lnk)
-
-				-- Template
-			create tpl.make
-			create d.make_with_name ("title");
-			d.set_prompt ("Title")
-			tpl.add_data (d)
-			create d.make_with_name ("content");
-			d.set_prompt ("Graphviz Code")
-			tpl.add_data (d)
-			create d.make_with_name ("description");
-			d.set_prompt ("Description")
-			tpl.add_data (d)
-			col.set_template (tpl)
+			col.add_link (new_link (req.absolute_script_url (home_uri), "home", "Home API", Void, Void))
+			col.add_link (new_link (req.absolute_script_url (graph_uri), "graphs", "Home Graph", Void, Void))
+			col.add_link (new_link (req.absolute_script_url (register_uri), "register", "User Register", Void, Void))
+			col.add_link (new_link (req.absolute_script_url (login_uri), "login", "User Login", Void, Void))
 			Result := col
 		end
 
@@ -192,7 +144,6 @@ feature -- Collection + JSON
 				}
 		]"
 
-
 	build_item (req: WSF_REQUEST; a_graph: GRAPH; cj: CJ_COLLECTION)
 		local
 			cj_item: CJ_ITEM
@@ -209,42 +160,115 @@ feature -- Collection + JSON
 		end
 
 	collection_json_graph (req: WSF_REQUEST; g: detachable GRAPH): CJ_COLLECTION
-			--	"[
-			--			{
-			--		   	 "collection": {
-			--			   	"href": "$GRAPH_URL",
-			--		        "items": [],
-			--		        "links": [
-			--		            {
-			--		                "href": "$HOME_URL",
-			--		                "prompt": "Home Graph",
-			--		                "rel": "Home"
-			--		            }
-			--		        ],
-			--		        "queries": [],
-			--		        "template":{
-			--		    		   "data" :
-			--		       				 [
-			--		        			{"name" : "title", "value" : "","prompt" :"Title"},
-			--		        			{"name" : "content", "value" : "", "prompt" : "Graphviz Code"},
-			--		        			{"name" : "description", "value" : "", "prompt" : "Description"}
-			--		        	 ]
-			--		   			},
-			--		        "version": "1.0"
-			--		    	}
-			--			}
-			--	]"
+		local
+			col: CJ_COLLECTION
+		do
+			col := collection_json_minimal_builder (req)
+
+				-- Links
+			col.add_link (new_link (req.absolute_script_url (home_uri), "home", "Home API", Void, Void))
+			col.add_link (new_link (req.absolute_script_url (register_uri), "register", "User Register", Void, Void))
+			col.add_link (new_link (req.absolute_script_url (login_uri), "login", "User Login", Void, Void))
+			Result := col
+		end
+
+	new_user_template (u: detachable USER): CJ_TEMPLATE
+		local
+			d: CJ_DATA
+		do
+				-- Template
+			create Result.make
+			create d.make_with_name ("User Name");
+			d.set_prompt ("User Name")
+			if u /= Void then
+				d.set_value (u.user_name)
+			end
+			Result.add_data (d)
+			create d.make_with_name ("Password");
+			d.set_prompt ("Password")
+			if u /= Void then
+				d.set_value (u.password)
+			end
+			Result.add_data (d)
+		end
+
+	collection_json_user_graph (req: WSF_REQUEST; user_id: INTEGER): STRING
+		do
+			create Result.make_from_string (collection_json_user_graph_tpl)
+			Result.replace_substring_all ("$HOME_URL", req.absolute_script_url (home_uri))
+			Result.replace_substring_all ("$USER_URI", req.absolute_script_url (user_id_uri (user_id)))
+			Result.replace_substring_all ("$USER_GRAPH_URI", req.absolute_script_url (user_id_graph_uri (user_id)))
+		end
+
+	collection_json_user_graph_tpl: STRING = "[
+					{
+			   	 "collection": {
+			        "items": [],
+			        "links": [
+			            {
+			                "href": "$HOME_URL",
+			                "prompt": "Home Graph",
+			                "rel": "Home"
+			            },
+			            {
+			                "href": "$USER_URI",
+			                "prompt": "User Home",
+			                "rel": "User Home"
+			            }, 
+			            {
+			                "href": "$USER_GRAPH_URI",
+			                "prompt": "User Graphs",
+			                "rel": "User Graphs"
+			            }
+			            
+			        ],
+			        "queries": [],
+			        "templates": [],
+			        "version": "1.0"
+			    	}
+				}
+		]"
+
+	collection_json_user_graph_builder (req: WSF_REQUEST; user_id: INTEGER; g: detachable GRAPH): CJ_COLLECTION
+			--      "[
+			--                      {
+			--                       "collection": {
+			--                              "href": "$GRAPH_URL",
+			--                      "items": [],
+			--                      "links": [
+			--                          {
+			--                              "href": "$HOME_URL",
+			--                              "prompt": "Home Graph",
+			--                              "rel": "Home"
+			--                          }
+			--                      ],
+			--                      "queries": [],
+			--                      "template":{
+			--                                 "data" :
+			--                                               [
+			--                                              {"name" : "title", "value" : "","prompt" :"Title"},
+			--                                              {"name" : "content", "value" : "", "prompt" : "Graphviz Code"},
+			--                                              {"name" : "description", "value" : "", "prompt" : "Description"}
+			--                               ]
+			--                                      },
+			--                      "version": "1.0"
+			--                      }
+			--                      }
+			--      ]"
 		local
 			col: CJ_COLLECTION
 			lnk: CJ_LINK
 			tpl: CJ_TEMPLATE
 			d: CJ_DATA
 		do
-			create col.make_with_href (req.absolute_script_url (graph_uri))
+			create col.make_with_href (req.absolute_script_url (user_id_graph_uri (user_id)))
 
 				-- Links
 			create lnk.make (req.absolute_script_url (home_uri), "Home")
 			lnk.set_prompt ("Home Graph")
+			col.add_link (lnk)
+			create lnk.make (req.absolute_script_url (user_id_uri (user_id)), "User")
+			lnk.set_prompt ("Home User")
 			col.add_link (lnk)
 
 				-- Template
@@ -271,126 +295,19 @@ feature -- Collection + JSON
 			Result := col
 		end
 
-
-		collection_json_user_graph (req: WSF_REQUEST; user_id: INTEGER): STRING
-			do
-				create Result.make_from_string (collection_json_user_graph_tpl)
-				Result.replace_substring_all ("$HOME_URL", req.absolute_script_url (home_uri))
-				Result.replace_substring_all ("$USER_URI", req.absolute_script_url (user_id_uri (user_id)))
-				Result.replace_substring_all ("$USER_GRAPH_URI", req.absolute_script_url (user_id_graph_uri (user_id)))
-			end
-
-
-		collection_json_user_graph_tpl: STRING = "[
-						{
-				   	 "collection": {
-				        "items": [],
-				        "links": [
-				            {
-				                "href": "$HOME_URL",
-				                "prompt": "Home Graph",
-				                "rel": "Home"
-				            },
-				            {
-				                "href": "$USER_URI",
-				                "prompt": "User Home",
-				                "rel": "User Home"
-				            }, 
-				            {
-				                "href": "$USER_GRAPH_URI",
-				                "prompt": "User Graphs",
-				                "rel": "User Graphs"
-				            }
-				            
-				        ],
-				        "queries": [],
-				        "templates": [],
-				        "version": "1.0"
-				    	}
-					}
-			]"
-
-
-		collection_json_user_graph_builder (req: WSF_REQUEST; user_id: INTEGER; g: detachable GRAPH): CJ_COLLECTION
-                        --      "[
-                        --                      {
-                        --                       "collection": {
-                        --                              "href": "$GRAPH_URL",
-                        --                      "items": [],
-                        --                      "links": [
-                        --                          {
-                        --                              "href": "$HOME_URL",
-                        --                              "prompt": "Home Graph",
-                        --                              "rel": "Home"
-                        --                          }
-                        --                      ],
-                        --                      "queries": [],
-                        --                      "template":{
-                        --                                 "data" :
-                        --                                               [
-                        --                                              {"name" : "title", "value" : "","prompt" :"Title"},
-                        --                                              {"name" : "content", "value" : "", "prompt" : "Graphviz Code"},
-                        --                                              {"name" : "description", "value" : "", "prompt" : "Description"}
-                        --                               ]
-                        --                                      },
-                        --                      "version": "1.0"
-                        --                      }
-                        --                      }
-                        --      ]"
-                local
-                        col: CJ_COLLECTION
-                        lnk: CJ_LINK
-                        tpl: CJ_TEMPLATE
-                        d: CJ_DATA
-                do
-                        create col.make_with_href (req.absolute_script_url (user_id_graph_uri (user_id)))
-
-                                -- Links
-                        create lnk.make (req.absolute_script_url (home_uri), "Home")
-                        lnk.set_prompt ("Home Graph")
-                        col.add_link (lnk)
-                        create lnk.make (req.absolute_script_url (user_id_uri (user_id)), "User")
-                        lnk.set_prompt ("Home User")
-                        col.add_link (lnk)
-
-                                -- Template
-                        create tpl.make
-                        create d.make_with_name ("title");
-                        d.set_prompt ("Title")
-                        if g /= Void then
-                                d.set_value (g.title)
-                        end
-                        tpl.add_data (d)
-                        create d.make_with_name ("content");
-                        d.set_prompt ("Graphviz Code")
-                        if g /= Void then
-                                d.set_value (g.content)
-                        end
-                        tpl.add_data (d)
-                        create d.make_with_name ("description");
-                        d.set_prompt ("Description")
-                        if g /= Void then
-                                d.set_value (g.description)
-                        end
-                        tpl.add_data (d)
-                        col.set_template (tpl)
-                        Result := col
-                end
-
-
-	  build_item_user (req: WSF_REQUEST; user_id: INTEGER; a_graph: GRAPH; cj: CJ_COLLECTION)
-                local
-                        cj_item: CJ_ITEM
-                do
-                        create cj_item.make (req.absolute_script_url (user_graph_id_uri (user_id, a_graph.id)))
-                        cj_item.add_data (new_data ("description", a_graph.description, "Description"))
-                        cj_item.add_data (new_data ("content", a_graph.content, "Graph"))
-                        cj_item.add_data (new_data ("title", a_graph.title, "Title"))
-                        cj_item.add_link (new_link (req.absolute_script_url (user_graph_id_type_uri (user_id, a_graph.id, "png")), "Image", "Graph", "Title", "image/png"))
-                        cj_item.add_link (new_link (req.absolute_script_url (user_graph_id_type_uri (user_id, a_graph.id, "jpg")), "Image", "Graph", "Title", "image/jpg"))
-                        cj_item.add_link (new_link (req.absolute_script_url (user_graph_id_type_uri (user_id, a_graph.id, "pdf")), "Image", "Graph", "Title", "application/pdf"))
-                        cj_item.add_link (new_link (req.absolute_script_url (user_graph_id_type_uri (user_id, a_graph.id, "gif")), "Image", "Graph", "Title", "application/gif"))
-                        cj.add_item (cj_item)
-                end
+	build_item_user (req: WSF_REQUEST; user_id: INTEGER; a_graph: GRAPH; cj: CJ_COLLECTION)
+		local
+			cj_item: CJ_ITEM
+		do
+			create cj_item.make (req.absolute_script_url (user_graph_id_uri (user_id, a_graph.id)))
+			cj_item.add_data (new_data ("description", a_graph.description, "Description"))
+			cj_item.add_data (new_data ("content", a_graph.content, "Graph"))
+			cj_item.add_data (new_data ("title", a_graph.title, "Title"))
+			cj_item.add_link (new_link (req.absolute_script_url (user_graph_id_type_uri (user_id, a_graph.id, "png")), "Image", "Graph", "Title", "image/png"))
+			cj_item.add_link (new_link (req.absolute_script_url (user_graph_id_type_uri (user_id, a_graph.id, "jpg")), "Image", "Graph", "Title", "image/jpg"))
+			cj_item.add_link (new_link (req.absolute_script_url (user_graph_id_type_uri (user_id, a_graph.id, "pdf")), "Image", "Graph", "Title", "application/pdf"))
+			cj_item.add_link (new_link (req.absolute_script_url (user_graph_id_type_uri (user_id, a_graph.id, "gif")), "Image", "Graph", "Title", "application/gif"))
+			cj.add_item (cj_item)
+		end
 
 end
