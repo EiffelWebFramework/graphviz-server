@@ -47,22 +47,34 @@ feature --HTTP Methods
 			-- and will response with a cj with a corresponding Error.
 			-- HTTP_RESPONSE 500 INTERNAL_SERVER_ERROR, when the server can deliver the request
 		local
-			cj_error: CJ_ERROR
 			l_cj: CJ_COLLECTION
 		do
+			initialize_converters (json)
 			if attached {USER} ctx.user as l_user then
 				if attached {USER} user_dao.retrieve_by_name_and_password (l_user.user_name, l_user.password) as a_user then
-					compute_response_get (req, res, a_user)
+					l_cj := collection_json_minimal_builder (req)
+					l_cj.add_link (new_link (req.absolute_script_url (home_uri), "home","Home API",Void,Void))
+					l_cj.add_link (new_link (req.absolute_script_url (graph_uri), "graphs","Home Graph",Void,Void))
+					l_cj.add_link (new_link (req.absolute_script_url (user_id_uri (a_user.id)), "user","Home User",Void,Void))
+					if attached json.value (l_cj) as l_cj_answer then
+						compute_response (req, res, l_cj_answer.representation, {HTTP_STATUS_CODE}.ok)
+					end
+
 				else
-					if attached json_to_cj (collection_json_user (req, 0)) as a_cj then
-						a_cj.set_error (new_error ("User name does not exist or the password is wrong", "005", "The user name " + l_user.user_name + " not exist in the system or the password was wrong, try again"))
-						if attached json.value (a_cj) as l_cj_answer then
-							compute_response (req, res,l_cj_answer.representation, {HTTP_STATUS_CODE}.bad_request)
-						end
+					l_cj := collection_json_minimal_builder (req)
+					l_cj.add_link (new_link (req.absolute_script_url (home_uri), "home","Home API",Void,Void))
+					l_cj.add_link (new_link (req.absolute_script_url (graph_uri), "graphs","Home Graph",Void,Void))
+					l_cj.add_link (new_link (req.absolute_script_url (register_uri),"register", "User Register", Void, Void))
+					l_cj.set_error (new_error ("User name does not exist or the password is wrong", "005", "The user name " + l_user.user_name + " not exist in the system or the password was wrong, try again"))
+					if attached json.value (l_cj) as l_cj_answer then
+						compute_response (req, res,l_cj_answer.representation, {HTTP_STATUS_CODE}.bad_request)
 					end
 				end
 			else
-				l_cj := collection_json_root_builder (req)
+				l_cj := collection_json_minimal_builder (req)
+				l_cj.add_link (new_link (req.absolute_script_url (home_uri), "home","Home API",Void,Void))
+				l_cj.add_link (new_link (req.absolute_script_url (graph_uri), "graphs","Home Graph",Void,Void))
+				l_cj.add_link (new_link (req.absolute_script_url (register_uri),"register", "User Register", Void, Void))
 				l_cj.set_error (new_error ("Bad Request", "005", "User does not exist"))
 				if attached json.value (l_cj) as l_cj_answer then
 					compute_response (req, res, l_cj_answer.representation, {HTTP_STATUS_CODE}.bad_request)
@@ -70,23 +82,6 @@ feature --HTTP Methods
 			end
 		end
 
-	compute_response_get (req: WSF_REQUEST; res: WSF_RESPONSE; a_user: USER)
-		local
-			h: HTTP_HEADER
-			l_msg: STRING
-		do
-				--| Here we send a response with status code 200
-			create h.make
-			h.put_content_type ("application/vnd.collection+json")
-			l_msg := collection_json_user (req, a_user.id)
-			h.put_content_length (l_msg.count)
-			if attached req.request_time as time then
-				h.put_utc_date (time)
-			end
-			res.set_status_code ({HTTP_STATUS_CODE}.ok)
-			res.put_header_text (h.string)
-			res.put_string (l_msg)
-		end
 
 	compute_response (req: WSF_REQUEST; res: WSF_RESPONSE; msg: STRING; status_code: INTEGER)
 		local
@@ -131,42 +126,6 @@ feature -- Collection JSON support
 				end
 			end
 		end
-
-	collection_json_user (req: WSF_REQUEST; user_id: INTEGER): STRING
-		do
-			create Result.make_from_string (collection_json_user_tpl)
-			Result.replace_substring_all ("$HOME_URL", req.absolute_script_url (home_uri))
-			Result.replace_substring_all ("$USER_URI", req.absolute_script_url (user_id_uri (user_id)))
-			Result.replace_substring_all ("$GRAPH_URI", req.absolute_script_url (graph_uri))
-		end
-
-	collection_json_user_tpl: STRING = "[
-					{
-			   	 "collection": {
-			        "items": [],
-			        "links": [
-			            {
-			                "href": "$HOME_URL",
-			                "prompt": "Home Graph",
-			                "rel": "Home"
-			            },
-			            {
-			                "href": "$USER_URI",
-			                "prompt": "User Home",
-			                "rel": "User Home"
-			            },
-			               {
-			                "href": "$GRAPH_URI",
-			                "prompt": "Graphs ",
-			                "rel": "List of graphs"
-			            }
-			        ],
-			        "queries": [],
-			        "templates": [],
-			        "version": "1.0"
-			    	}
-				}
-		]"
 
 note
 	copyright: "2011-2012, Javier Velilla and others"

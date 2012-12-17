@@ -111,12 +111,13 @@ feature -- Graph process
 				--| We need to handle possible errors with the db layer.
 			if attached graph_dao.retrieve_by_id (id) as l_graph then
 				l_cj := collection_json_graph (req, l_graph)
+				l_cj.add_link (new_link (req.absolute_script_url (graph_uri), "graphs", "Home Graph",Void, Void))
 				build_item (req, l_graph, l_cj)
 				if attached json.value (l_cj) as l_cj_answer then
 					compute_response_get (req, res, l_cj_answer.representation, {HTTP_STATUS_CODE}.ok)
 				end
 			else
-				l_cj := collection_json_graph (req, Void)
+				l_cj := collection_json_root_builder (req)
 				l_cj.set_error (new_error ("Resource not found", "001", "The graph id " + id.out + " does not exist in the system"))
 				if attached json.value (l_cj) as l_cj_answer then
 					compute_response_get (req, res, l_cj_answer.representation, {HTTP_STATUS_CODE}.not_found)
@@ -125,16 +126,68 @@ feature -- Graph process
 		end
 
 	process_graphs (req: WSF_REQUEST; res: WSF_RESPONSE)
+		-- Initial implementation of pagination, righ now it uses a defaul value in case
+		-- we came from /graph
+		-- After that it can use an expansion of the following uri template /graph{?index,offset}
+		-- The client can redefine the offset, but maybe we can take a better approach to define
+		-- these values (index, offset)
+		local
+			l_count : INTEGER
+			l_pages : INTEGER
 		do
-			if attached graph_dao.retrieve_all as graphs then
-				if attached collection_json_graph (req, Void) as l_cj then
-					across
-						graphs as ic
-					loop
-						build_item (req, ic.item, l_cj)
+			l_count := graph_dao.retrieve_count
+			if  attached {WSF_STRING} req.query_parameter ("index") as l_index and then l_index.is_integer and then
+				attached {WSF_STRING} req.query_parameter ("offset") as l_offset and then l_offset.is_integer and then
+				attached graph_dao.retrieve_page (l_index.integer_value, l_offset.integer_value) as graphs then
+					if attached {CJ_COLLECTION} collection_json_graph (req, Void) as l_cj then
+						across
+							graphs as ic
+						loop
+							build_item (req, ic.item, l_cj)
+						end
+
+						l_pages :=  l_count // l_offset.integer_value
+						if l_pages > 0 then
+							l_cj.add_link (new_link (req.absolute_script_url(graph_uri_page (0, l_offset.integer_value)), "first","first",Void,Void))
+							if l_index.integer_value > 0 then
+								l_cj.add_link (new_link (req.absolute_script_url(graph_uri_page (l_index.integer_value - 1, l_offset.integer_value)), "prev","prev",Void,Void))
+							end
+							if l_index.integer_value + 1 < l_pages then
+								l_cj.add_link (new_link (req.absolute_script_url(graph_uri_page (l_index.integer_value + 1, l_offset.integer_value)), "next","next",Void,Void))
+							end
+							l_cj.add_link (new_link (req.absolute_script_url(graph_uri_page (l_pages, l_offset.integer_value)), "last","last",Void,Void))
+						else
+							l_cj.add_link (new_link (req.absolute_script_url(graph_uri_page (0, l_offset.integer_value)), "first","first",Void,Void))
+							l_cj.add_link (new_link (req.absolute_script_url(graph_uri_page (l_pages, l_offset.integer_value)), "last","last",Void,Void))
+						end
+						if attached json.value (l_cj) as l_cj_answer then
+							compute_response_get (req, res, l_cj_answer.representation, {HTTP_STATUS_CODE}.ok)
+						end
 					end
-					if attached json.value (l_cj) as l_cj_answer then
-						compute_response_get (req, res, l_cj_answer.representation, {HTTP_STATUS_CODE}.ok)
+
+			else
+				l_pages :=  l_count // 5 -- Default value
+				if attached graph_dao.retrieve_page (0, 5) as graphs then
+					if attached {CJ_COLLECTION} collection_json_graph (req, Void) as l_cj then
+						across
+							graphs as ic
+						loop
+							build_item (req, ic.item, l_cj)
+						end
+
+						if l_pages > 0 then
+							l_cj.add_link (new_link (req.absolute_script_url(graph_uri_page (0, 5)), "first","first",Void,Void))
+							if 1 < l_pages then
+								l_cj.add_link (new_link (req.absolute_script_url(graph_uri_page (1, 5)), "next","next",Void,Void))
+							end
+							l_cj.add_link (new_link (req.absolute_script_url(graph_uri_page (l_pages, 5)), "last","last",Void,Void))
+						else
+							l_cj.add_link (new_link (req.absolute_script_url(graph_uri_page (0, 5)), "first","first",Void,Void))
+							l_cj.add_link (new_link (req.absolute_script_url(graph_uri_page (l_pages, 5)), "last","last",Void,Void))
+						end
+						if attached json.value (l_cj) as l_cj_answer then
+							compute_response_get (req, res, l_cj_answer.representation, {HTTP_STATUS_CODE}.ok)
+						end
 					end
 				end
 			end

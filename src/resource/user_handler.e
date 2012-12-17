@@ -51,31 +51,33 @@ feature -- HTTP Methods
 				--| TODO refactor code.
 			initialize_converters (json)
 			if attached {WSF_STRING} req.path_parameter ("id") as l_id and then l_id.is_integer and then attached ctx.user as auth_user and then attached user_dao.retrieve_by_id (l_id.integer_value) as l_user then
-				if l_user.id = auth_user.id then
-					if attached json_to_cj (collection_json_user_graph (req, l_user.id)) as cj then
-						if attached json.value (cj) as l_cj_answer then
-							compute_response_get (req, res, l_cj_answer.representation, {HTTP_STATUS_CODE}.ok)
+					if l_user.id = auth_user.id then
+						l_cj := collection_json_minimal_builder (req)
+						l_cj.add_link (new_link (req.absolute_script_url (home_uri), "home","Home API",Void,Void))
+						l_cj.add_link (new_link (req.absolute_script_url (user_id_graph_uri (l_user.id)), "user graphs","User Graphs",Void,Void))
+						l_cj.add_link (new_link (req.absolute_script_url (user_id_uri (l_user.id)), "user","Home User",Void,Void))
+						if attached json.value (l_cj) as l_cj_answer then
+							compute_response (req, res, l_cj_answer.representation, {HTTP_STATUS_CODE}.ok)
 						end
-					end
-				elseif attached ctx.user as l_auth_user then
+					elseif attached ctx.user as l_auth_user then
 						-- Trying to access another user that the authenticated one,
 						-- which is forbidden in this example...
-					l_cj := collection_json_root_builder (req)
-					l_cj.set_error (new_error ("Fobidden", "003", "You try to access the user " + l_id.value + " while authenticating with the user " + l_auth_user.id.out))
-					if attached json.value (l_cj) as l_cj_answer then
-						compute_response_get (req, res, l_cj_answer.representation, {HTTP_STATUS_CODE}.forbidden)
+						l_cj := collection_json_root_builder (req)
+						l_cj.set_error (new_error ("Fobidden", "003", "You try to access the user " + l_id.value + " while authenticating with the user " + l_auth_user.id.out))
+						if attached json.value (l_cj) as l_cj_answer then
+							compute_response (req, res, l_cj_answer.representation, {HTTP_STATUS_CODE}.forbidden)
+						end
 					end
-				end
 			else
 				l_cj := collection_json_root_builder (req)
 				l_cj.set_error (new_error ("Resource Not found", "001", "You try to access the user " + req.request_uri + " and it does not exist in the system"))
 				if attached json.value (l_cj) as l_cj_answer then
-					compute_response_get (req, res, l_cj_answer.representation, {HTTP_STATUS_CODE}.not_found)
+					compute_response (req, res, l_cj_answer.representation, {HTTP_STATUS_CODE}.not_found)
 				end
 			end
 		end
 
-	compute_response_get (req: WSF_REQUEST; res: WSF_RESPONSE; msg: STRING; status_code: INTEGER)
+	compute_response (req: WSF_REQUEST; res: WSF_RESPONSE; msg: STRING; status_code: INTEGER)
 		local
 			h: HTTP_HEADER
 		do

@@ -97,6 +97,7 @@ feature {NONE} -- Initialization
 				--graph
 			router.map_with_request_methods (create {WSF_URI_MAPPING}.make_trailing_slash_ignored (graph_uri, graph_handler), router.methods_GET)
 			router.map_with_request_methods (create {WSF_URI_TEMPLATE_MAPPING}.make_from_template (graph_id_uri_template, graph_handler), router.methods_GET)
+			router.map_with_request_methods (create {WSF_URI_TEMPLATE_MAPPING}.make_from_template (graph_uri_page_template, graph_handler), router.methods_GET)
 
 				--user
 			router.handle_with_request_methods (user_id_uri_template.template, user_authentication_filter, router.methods_GET)
