@@ -40,7 +40,7 @@ inherit
 
 feature -- Documentation
 
-	mapping_documentation (m: WSF_ROUTER_MAPPING): WSF_ROUTER_MAPPING_DOCUMENTATION
+	mapping_documentation (m: WSF_ROUTER_MAPPING; a_request_methods: detachable WSF_REQUEST_METHODS): WSF_ROUTER_MAPPING_DOCUMENTATION
 		do
 			create Result.make (m)
 			if attached {WSF_URI_TEMPLATE_MAPPING} m as l_uri_tpl then

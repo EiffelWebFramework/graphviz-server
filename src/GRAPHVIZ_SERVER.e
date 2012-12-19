@@ -152,39 +152,45 @@ feature -- Execution
 			l_description: STRING
 			l_cj : CJ_COLLECTION
 			l_allow : STRING
+			def: WSF_DEFAULT_ROUTER_RESPONSE
 		do
 			initialize_converters (json)
 			if req.content_length_value > 0 then
 				req.input.read_string (req.content_length_value.as_integer_32)
 			end
-			create h.make
-			h.put_content_type ("application/vnd.collection+json")
-			l_cj := collection_json_root_builder (req)
-
-			create l_allow.make_empty
-			across router.allowed_methods_for_request (req) as c loop
-					l_allow.append (c.item)
-					l_allow.append (",")
-			end
-			if not l_allow.is_empty then
-				l_allow.remove_tail (1)
-				l_description := req.request_method + req.request_uri + " is not allowed" + "%N"
-				l_cj.set_error ( new_error ("Method not allowed", "002", l_description))
-
-				h.put_header_key_value ({HTTP_HEADER_NAMES}.header_allow, l_allow)
-				res.set_status_code ({HTTP_STATUS_CODE}.method_not_allowed)
+			if req.is_content_type_accepted ("text/html") then
+				create def.make_with_router (req, router)
+				def.set_documentation_included (True)
+				res.send (def)
 			else
-				l_description := req.request_method + req.request_uri + " is not found" + "%N"
-				l_cj.set_error ( new_error ("Method not found", "005", l_description))
-				res.set_status_code ({HTTP_STATUS_CODE}.not_found)
-			end
-			h.put_current_date
-			res.put_header_text (h.string)
-			if attached json.value (l_cj) as l_cj_answer then
-				h.put_content_length (l_cj_answer.representation.count)
-				res.put_string (l_cj_answer.representation)
-			end
+				create h.make
+				h.put_content_type ("application/vnd.collection+json")
+				l_cj := collection_json_root_builder (req)
 
+				create l_allow.make_empty
+				across router.allowed_methods_for_request (req) as c loop
+						l_allow.append (c.item)
+						l_allow.append (",")
+				end
+				if not l_allow.is_empty then
+					l_allow.remove_tail (1)
+					l_description := req.request_method + req.request_uri + " is not allowed" + "%N"
+					l_cj.set_error ( new_error ("Method not allowed", "002", l_description))
+
+					h.put_header_key_value ({HTTP_HEADER_NAMES}.header_allow, l_allow)
+					res.set_status_code ({HTTP_STATUS_CODE}.method_not_allowed)
+				else
+					l_description := req.request_method + req.request_uri + " is not found" + "%N"
+					l_cj.set_error ( new_error ("Method not found", "005", l_description))
+					res.set_status_code ({HTTP_STATUS_CODE}.not_found)
+				end
+				h.put_current_date
+				res.put_header_text (h.string)
+				if attached json.value (l_cj) as l_cj_answer then
+					h.put_content_length (l_cj_answer.representation.count)
+					res.put_string (l_cj_answer.representation)
+				end
+			end
 		end
 
 	initialize_graphviz
