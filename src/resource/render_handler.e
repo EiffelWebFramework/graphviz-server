@@ -221,8 +221,12 @@ feature -- Htdocs
 			dn: DIRECTORY_NAME
 		once
 			create e
-			create dn.make_from_string (e.current_working_directory)
-			dn.extend ("htdocs")
+			if attached e.get ("GRAPHVIZ_ROOT_DIR") as l_root then
+				create dn.make_from_string (l_root)
+			else
+				create dn.make_from_string (e.current_working_directory)
+				dn.extend ("htdocs")
+			end
 			Result := dn.string
 			if Result [Result.count] = Operating_environment.directory_separator then
 				Result := Result.substring (1, Result.count - 1)
