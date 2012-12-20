@@ -140,6 +140,7 @@ feature -- Execution
 
 	execute (req: WSF_REQUEST; res: WSF_RESPONSE)
 		do
+			initialize_converters (json)
 			filter.execute (req, res)
 		end
 

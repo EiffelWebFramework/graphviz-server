@@ -10,7 +10,7 @@ class
 feature -- Access	
 
 	--output_of_command (a_cmd: READABLE_STRING_8; a_dir: detachable READABLE_STRING_GENERAL): detachable STRING
-	output_of_command (a_cmd: READABLE_STRING_8; a_dir: detachable STRING): detachable STRING
+	output_of_command (a_cmd: READABLE_STRING_8; a_dir: detachable STRING; is_silent: BOOLEAN): detachable STRING
 			-- Output of command `a_cmd' launched in directory `a_dir'.
 		require
 			cmd_attached: a_cmd /= Void
@@ -40,7 +40,10 @@ feature -- Access
 				else
 					p.wait_for_exit
 					if p.exit_code /= 0 then
-						io.error.put_string ("Error: exit code for %"" + a_cmd + "%" = "+ p.exit_code.out +"%N")
+						if not is_silent then
+							io.error.put_string ("Error: exit code for %"" + a_cmd + "%" = "+ p.exit_code.out +"%N")
+							io.error.put_string ("Output: " + Result + "%N")
+						end
 					end
 				end
 			else

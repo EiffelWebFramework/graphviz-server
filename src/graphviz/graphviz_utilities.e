@@ -36,7 +36,7 @@ feature -- Supported formats
 		do
 			create cmd.make_from_string (dot_command)
 			cmd.append_string_general (" -T?")
-			if attached output_of_command (cmd, Void) as s then
+			if attached output_of_command (cmd, Void, True) as s then
 				p := s.substring_index ("Use one of:", 1)
 				if p > 0 then
 					if attached s.substring (p + 12, s.count) as l_types then
@@ -62,7 +62,7 @@ feature -- Render
 			log ("Graph generation%N")
 				--create gcb.make_with_format ({GRAPHVIZ_FORMATS}.jpg,content_file,name)
 			if attached dot_rendering_command (a_graph_file_name.to_string_8, a_type.to_string_8, a_file_name.to_string_8) as command then
-				if attached output_of_command (command, Void) as s then
+				if attached output_of_command (command, Void, True) as s then
 					log (s)
 				else
 					log ("Nothing!!")
