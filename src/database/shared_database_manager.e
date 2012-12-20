@@ -21,7 +21,7 @@ feature -- db Manager
 			has_graphs_table: BOOLEAN
 			has_users_table: BOOLEAN
 		once ("THREAD")
-			print ("%NOpening Database...%N")
+			io.error.put_string ("%NOpening Database...%N")
 
 				-- Open/create a Database.
 			create Result.make_create_read_write ("graph.sqlite")
@@ -30,7 +30,7 @@ feature -- db Manager
 				l_query.execute_new as c
 			loop
 				if c.item.count >= 1 and then attached c.item.string_value (1) as l_table_name then
-					print (" - table: " + l_table_name + "%N")
+					io.error.put_string (" - table: " + l_table_name + "%N")
 					if l_table_name.is_case_insensitive_equal ("graphs") then
 						has_graphs_table := True
 					elseif l_table_name.is_case_insensitive_equal ("users") then
@@ -44,7 +44,7 @@ feature -- db Manager
 				create l_modify.make ("CREATE TABLE IF NOT EXISTS USERS(user_id INTEGER NOT NULL PRIMARY KEY, user_name TEXT UNIQUE, password TEXT);", Result)
 				l_modify.execute
 				if l_modify.changes_count > 0 then
-					print ("USERS Table created.%N")
+					io.error.put_string ("USERS Table created.%N")
 				end
 			end
 
@@ -53,7 +53,7 @@ feature -- db Manager
 				create l_modify.make ("CREATE TABLE IF NOT EXISTS GRAPHS(graph_id INTEGER NOT NULL PRIMARY KEY, description TEXT, title VARCHAR(30), content TEXT, user_id INTEGER NOT NULL REFERENCES USERS);", Result)
 				l_modify.execute
 				if l_modify.changes_count > 0 then
-					print ("Graphs Table created.%N")
+					io.error.put_string ("Graphs Table created.%N")
 				end
 			end
 		end
@@ -66,7 +66,7 @@ feature -- {EQA_TEST_SET}
 			l_modify: SQLITE_MODIFY_STATEMENT
 			l_query: SQLITE_QUERY_STATEMENT
 		once ("OBJECT")
-			print ("%NOpening Database...%N")
+			io.error.put_string ("%NOpening Database...%N")
 
 				-- Open/create a Database.
 			create Result.make_create_read_write (db_name)
@@ -74,7 +74,7 @@ feature -- {EQA_TEST_SET}
 			across
 				l_query.execute_new as l_cursor
 			loop
-				print (" - table: " + l_cursor.item.string_value (1) + "%N")
+				io.error.put_string (" - table: " + l_cursor.item.string_value (1) + "%N")
 			end
 
 				-- Drop tables
@@ -89,14 +89,14 @@ feature -- {EQA_TEST_SET}
 			create l_modify.make ("CREATE TABLE USERS(user_id INTEGER NOT NULL PRIMARY KEY, user_name TEXT UNIQUE, password TEXT);", Result)
 			l_modify.execute
 			if l_modify.changes_count > 0 then
-				print ("USERS Table created.%N")
+				io.error.put_string ("USERS Table created.%N")
 			end
 
 				-- Create a new table graphs
 			create l_modify.make ("CREATE TABLE GRAPHS (graph_id INTEGER NOT NULL PRIMARY KEY, description TEXT, title VARCHAR(30), content TEXT, user_id INTEGER NOT NULL REFERENCES USERS);", Result)
 			l_modify.execute
 			if l_modify.changes_count > 0 then
-				print ("Graphs Table created.%N")
+				io.error.put_string ("Graphs Table created.%N")
 			end
 		end
 

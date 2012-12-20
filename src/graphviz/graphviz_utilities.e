@@ -8,6 +8,7 @@ class
 	GRAPHVIZ_UTILITIES
 
 inherit
+
 	PROCESS_HELPER
 
 feature -- Logger
@@ -57,7 +58,7 @@ feature -- Render
 			ascii_graph_file_name: a_graph_file_name.is_valid_as_string_8
 			ascii_file_name: a_file_name.is_valid_as_string_8
 		do
-			-- FIXME: handle unicode properly  (see EiffelStudio 7.2)
+				-- FIXME: handle unicode properly  (see EiffelStudio 7.2)
 			log ("Graph generation%N")
 				--create gcb.make_with_format ({GRAPHVIZ_FORMATS}.jpg,content_file,name)
 			if attached dot_rendering_command (a_graph_file_name.to_string_8, a_type.to_string_8, a_file_name.to_string_8) as command then
@@ -86,6 +87,19 @@ feature {NONE} -- Initialization
 			Result.append (a_file_name + "." + a_type)
 		end
 
-	dot_command: STRING = "dot"
+	dot_command: STRING
+		local
+			e: EXECUTION_ENVIRONMENT
+			fn: FILE_NAME
+		once
+			create e
+			if attached e.get ("GRAPHVIZ_DOT_DIR") as d then
+				create fn.make_from_string (d)
+				fn.set_file_name ("dot")
+				Result := fn.string
+			else
+				Result := "dot"
+			end
+		end
 
 end

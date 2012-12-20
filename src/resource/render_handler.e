@@ -68,7 +68,7 @@ feature -- Logging
 
 	log (m: READABLE_STRING_GENERAL)
 		do
-			print (m)
+			io.error.put_string (m.to_string_8)
 		end
 
 feature --HTTP Methods

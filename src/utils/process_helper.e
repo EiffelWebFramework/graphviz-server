@@ -35,9 +35,17 @@ feature -- Access
 				)
 				p.redirect_error_to_same_as_output
 				p.launch
-				p.wait_for_exit
+				if not p.launched then
+					io.error.put_string ("Error: can not execute %"" + a_cmd + "%"%N")
+				else
+					p.wait_for_exit
+					if p.exit_code /= 0 then
+						io.error.put_string ("Error: exit code for %"" + a_cmd + "%" = "+ p.exit_code.out +"%N")
+					end
+				end
 			else
 				err := True
+				io.error.put_string ("Error: can not get output from %"" + a_cmd + "%"%N")
 			end
 		rescue
 			retried := True
