@@ -10,7 +10,7 @@ class
 feature -- Access	
 
 	--output_of_command (a_cmd: READABLE_STRING_8; a_dir: detachable READABLE_STRING_GENERAL): detachable STRING
-	output_of_command (a_cmd: READABLE_STRING_8; a_dir: detachable STRING; is_silent: BOOLEAN): detachable STRING
+	output_of_command (a_cmd: READABLE_STRING_8; a_dir: detachable STRING; is_silent: BOOLEAN; a_error_buffer: detachable STRING): detachable STRING
 			-- Output of command `a_cmd' launched in directory `a_dir'.
 		require
 			cmd_attached: a_cmd /= Void
@@ -36,6 +36,9 @@ feature -- Access
 				p.redirect_error_to_same_as_output
 				p.launch
 				if not p.launched then
+					if a_error_buffer /= Void then
+						a_error_buffer.append ("Error: can not execute %"" + a_cmd + "%"%N")
+					end
 					io.error.put_string ("Error: can not execute %"" + a_cmd + "%"%N")
 				else
 					p.wait_for_exit
@@ -43,12 +46,18 @@ feature -- Access
 						if not is_silent then
 							io.error.put_string ("Error: exit code for %"" + a_cmd + "%" = "+ p.exit_code.out +"%N")
 							io.error.put_string ("Output: " + Result + "%N")
+							if a_error_buffer /= Void then
+								a_error_buffer.append ("Output: " + Result + "%N")
+							end
 						end
 					end
 				end
 			else
 				err := True
 				io.error.put_string ("Error: can not get output from %"" + a_cmd + "%"%N")
+				if a_error_buffer /= Void then
+					a_error_buffer.append ("Error: can not get output from %"" + a_cmd + "%"%N")
+				end
 			end
 		rescue
 			retried := True
