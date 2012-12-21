@@ -8,6 +8,7 @@ class
 	GRAPHVIZ_UTILITIES
 
 inherit
+
 	PROCESS_HELPER
 
 feature -- Logger
@@ -35,7 +36,7 @@ feature -- Supported formats
 		do
 			create cmd.make_from_string (dot_command)
 			cmd.append_string_general (" -T?")
-			if attached output_of_command (cmd, Void) as s then
+			if attached output_of_command (cmd, Void, True, Void) as s then
 				p := s.substring_index ("Use one of:", 1)
 				if p > 0 then
 					if attached s.substring (p + 12, s.count) as l_types then
@@ -52,16 +53,17 @@ feature -- Supported formats
 
 feature -- Render
 
-	render_graph_into_file (a_graph_file_name: READABLE_STRING_GENERAL; a_type: READABLE_STRING_GENERAL; a_file_name: READABLE_STRING_GENERAL)
+	render_graph_into_file (a_graph_file_name: READABLE_STRING_GENERAL; a_type: READABLE_STRING_GENERAL;
+			a_file_name: READABLE_STRING_GENERAL; a_error_buffer: detachable STRING_8)
 		require
 			ascii_graph_file_name: a_graph_file_name.is_valid_as_string_8
 			ascii_file_name: a_file_name.is_valid_as_string_8
 		do
-			-- FIXME: handle unicode properly  (see EiffelStudio 7.2)
+				-- FIXME: handle unicode properly  (see EiffelStudio 7.2)
 			log ("Graph generation%N")
 				--create gcb.make_with_format ({GRAPHVIZ_FORMATS}.jpg,content_file,name)
 			if attached dot_rendering_command (a_graph_file_name.to_string_8, a_type.to_string_8, a_file_name.to_string_8) as command then
-				if attached output_of_command (command, Void) as s then
+				if attached output_of_command (command, Void, True, a_error_buffer) as s then
 					log (s)
 				else
 					log ("Nothing!!")
@@ -86,6 +88,19 @@ feature {NONE} -- Initialization
 			Result.append (a_file_name + "." + a_type)
 		end
 
-	dot_command: STRING = "dot"
+	dot_command: STRING
+		local
+			e: EXECUTION_ENVIRONMENT
+			fn: FILE_NAME
+		once
+			create e
+			if attached e.get ("GRAPHVIZ_DOT_DIR") as d then
+				create fn.make_from_string (d)
+				fn.set_file_name ("dot")
+				Result := fn.string
+			else
+				Result := "dot"
+			end
+		end
 
 end

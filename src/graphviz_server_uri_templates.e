@@ -24,7 +24,7 @@ feature -- Access: graph
 
     graph_uri_page_template : URI_TEMPLATE
     	once
-    		create Result.make (graph_uri + "{?index,offset}")
+    		create Result.make (graph_uri + "{?offset}")
     	end
 
 	graph_id_type_uri_template: URI_TEMPLATE
@@ -56,12 +56,11 @@ feature -- Access: graph
 			Result := graph_id_uri_template.expanded_string (ht)
 		end
 
-	graph_uri_page (an_index:INTEGER; an_offset:INTEGER) : STRING
+	graph_uri_page (an_offset:INTEGER) : STRING
 		local
 			ht: HASH_TABLE [detachable ANY, STRING_8]
 		do
-			create ht.make (2)
-			ht.force (an_index, "index")
+			create ht.make (1)
 			ht.force (an_offset, "offset")
 			Result := graph_uri_page_template.expanded_string (ht)
 		end

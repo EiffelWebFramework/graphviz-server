@@ -40,7 +40,7 @@ inherit
 
 feature -- Documentation
 
-	mapping_documentation (m: WSF_ROUTER_MAPPING): WSF_ROUTER_MAPPING_DOCUMENTATION
+	mapping_documentation (m: WSF_ROUTER_MAPPING; a_request_methods: detachable WSF_REQUEST_METHODS): WSF_ROUTER_MAPPING_DOCUMENTATION
 		do
 			create Result.make (m)
 			if attached {WSF_URI_TEMPLATE_MAPPING} m as l_uri_tpl then
@@ -68,7 +68,7 @@ feature -- Logging
 
 	log (m: READABLE_STRING_GENERAL)
 		do
-			print (m)
+			io.error.put_string (m.to_string_8)
 		end
 
 feature --HTTP Methods
@@ -103,7 +103,7 @@ feature --HTTP Methods
 		do
 			if attached graph_dao.retrieve_by_id_and_user_id (gid, uid) as l_graph then
 				if is_supported (type.value) then
-					build_graph (l_graph, uid, type.value)
+					build_graph (l_graph, uid, type.value, Void)
 					compute_response_get (req, res, uid.out, gid.out, type.value)
 				else
 					m := "Format [" + type.value + "] is not supported. Try one of the following: "
@@ -131,11 +131,13 @@ feature --HTTP Methods
 	process_graph_render (req: WSF_REQUEST; res: WSF_RESPONSE; type: WSF_STRING; gid: INTEGER)
 		local
 			l_cj : CJ_COLLECTION
+			err: STRING
 			m : STRING
 		do
 			if attached graph_dao.retrieve_by_id (gid) as l_graph then
 				if is_supported (type.value) then
-					build_graph (l_graph, 0, type.value)
+					create err.make_empty
+					build_graph (l_graph, 0, type.value, err)
 					compute_response_get (req, res, "0", gid.out, type.value)
 				else
 					m := "Format [" + type.value + "] is not supported. Try one of the following: "
@@ -221,8 +223,12 @@ feature -- Htdocs
 			dn: DIRECTORY_NAME
 		once
 			create e
-			create dn.make_from_string (e.current_working_directory)
-			dn.extend ("htdocs")
+			if attached e.get ("GRAPHVIZ_ROOT_DIR") as l_root then
+				create dn.make_from_string (l_root)
+			else
+				create dn.make_from_string (e.current_working_directory)
+				dn.extend ("htdocs")
+			end
 			Result := dn.string
 			if Result [Result.count] = Operating_environment.directory_separator then
 				Result := Result.substring (1, Result.count - 1)
@@ -249,20 +255,29 @@ feature -- File Helper
 
 feature -- Graphviz utils
 
-	build_graph (a_graph: GRAPH; user_id: INTEGER; a_type: STRING)
+	build_graph (a_graph: GRAPH; user_id: INTEGER; a_type: STRING; a_error_buffer: detachable STRING)
 		local
 			fn, ofn: FILE_NAME
+			f: PLAIN_TEXT_FILE
 			u: GRAPHVIZ_UTILITIES
 		do
 			create fn.make_from_string (document_root)
 			fn.set_file_name ("temp_" + user_id.out + "_" + a_graph.id.out)
 			fn.add_extension ("graphviz")
-			create_file (fn.string, a_graph.content)
+			create f.make (fn.string)
+			if not f.exists or f.is_access_writable then
+				f.open_write
+				f.put_string (a_graph.content.to_string_8)
+				f.close
+			elseif a_error_buffer /= Void then
+				a_error_buffer.append ("Could not create temp file %"" + fn.string + "%"%N")
+			end
+--			create_file (fn.string, a_graph.content)
 			create ofn.make_from_string (document_root)
 			ofn.set_file_name ("Graph_" + user_id.out + "_" + a_graph.id.out)
 			create u
 			u.set_logger (create {FILE_LOGGER}.make (io.error))
-			u.render_graph_into_file (fn.string, a_type, ofn.string)
+			u.render_graph_into_file (fn.string, a_type, ofn.string, a_error_buffer)
 		end
 
 feature {NONE} --Implementation

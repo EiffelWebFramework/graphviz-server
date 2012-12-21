@@ -1,2 +1,9 @@
 EIFGENs
 *.swp
+htdocs/Graph_
+htdocs/temp_
+htdocs/Graph_0_1.png
+htdocs/Graph_1_1.png
+htdocs/temp_0_1.graphviz
+src/resource/render_handler.e.pretty
+src/utils/collection_json_helper.e.pretty

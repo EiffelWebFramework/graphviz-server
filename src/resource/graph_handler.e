@@ -134,11 +134,16 @@ feature -- Graph process
 		local
 			l_count : INTEGER
 			l_pages : INTEGER
+			p_offset : INTEGER
 		do
 			l_count := graph_dao.retrieve_count
-			if  attached {WSF_STRING} req.query_parameter ("index") as l_index and then l_index.is_integer and then
-				attached {WSF_STRING} req.query_parameter ("offset") as l_offset and then l_offset.is_integer and then
-				attached graph_dao.retrieve_page (l_index.integer_value, l_offset.integer_value) as graphs then
+			if  attached {WSF_STRING} req.query_parameter ("offset") as l_offset and then l_offset.is_integer then
+				if l_offset.integer_value = 0 then
+					p_offset := 0
+				else
+					p_offset := l_offset.integer_value // 5
+				end
+				if attached graph_dao.retrieve_page (p_offset, l_offset.integer_value) as graphs then
 					if attached {CJ_COLLECTION} collection_json_graph (req, Void) as l_cj then
 						across
 							graphs as ic
@@ -146,27 +151,27 @@ feature -- Graph process
 							build_item (req, ic.item, l_cj)
 						end
 
-						l_pages :=  l_count // l_offset.integer_value
-						if l_pages > 0 then
-							l_cj.add_link (new_link (req.absolute_script_url(graph_uri_page (0, l_offset.integer_value)), "first","first",Void,Void))
-							if l_index.integer_value > 0 then
-								l_cj.add_link (new_link (req.absolute_script_url(graph_uri_page (l_index.integer_value - 1, l_offset.integer_value)), "prev","prev",Void,Void))
+						l_pages :=  (l_count // 5) + 1
+						if l_pages > 1 then
+							l_cj.add_link (new_link (req.absolute_script_url(graph_uri_page (0)), "first","Page 1 of " +l_pages.out,Void,Void))
+							if l_offset.integer_value >= 5 then
+								l_cj.add_link (new_link (req.absolute_script_url(graph_uri_page (l_offset.integer_value - 5)), "prev","Page " + (((l_offset.integer_value - 5) // 5)+1).out + " of " +l_pages.out,Void,Void))
 							end
-							if l_index.integer_value + 1 < l_pages then
-								l_cj.add_link (new_link (req.absolute_script_url(graph_uri_page (l_index.integer_value + 1, l_offset.integer_value)), "next","next",Void,Void))
+							if l_offset.integer_value <= l_count then
+								l_cj.add_link (new_link (req.absolute_script_url(graph_uri_page (l_offset.integer_value + 5)), "next","Page " + (((l_offset.integer_value + 5) // 5)+1).out + " of "+l_pages.out,Void,Void))
 							end
-							l_cj.add_link (new_link (req.absolute_script_url(graph_uri_page (l_pages, l_offset.integer_value)), "last","last",Void,Void))
+							l_cj.add_link (new_link (req.absolute_script_url(graph_uri_page ((l_pages-1) * 5)), "last","Page " + l_pages.out + " of "+l_pages.out,Void,Void))
 						else
-							l_cj.add_link (new_link (req.absolute_script_url(graph_uri_page (0, l_offset.integer_value)), "first","first",Void,Void))
-							l_cj.add_link (new_link (req.absolute_script_url(graph_uri_page (l_pages, l_offset.integer_value)), "last","last",Void,Void))
+							l_cj.add_link (new_link (req.absolute_script_url(graph_uri_page (l_offset.integer_value)), "first","Page " + l_pages.out + " of "+l_pages.out,Void,Void))
+							l_cj.add_link (new_link (req.absolute_script_url(graph_uri_page (l_offset.integer_value)), "last","Page " + l_pages.out + " of "+l_pages.out,Void,Void))
 						end
 						if attached json.value (l_cj) as l_cj_answer then
 							compute_response_get (req, res, l_cj_answer.representation, {HTTP_STATUS_CODE}.ok)
 						end
 					end
-
+				end
 			else
-				l_pages :=  l_count // 5 -- Default value
+				l_pages :=  (l_count // 5) + 1 -- Default value
 				if attached graph_dao.retrieve_page (0, 5) as graphs then
 					if attached {CJ_COLLECTION} collection_json_graph (req, Void) as l_cj then
 						across
@@ -175,15 +180,15 @@ feature -- Graph process
 							build_item (req, ic.item, l_cj)
 						end
 
-						if l_pages > 0 then
-							l_cj.add_link (new_link (req.absolute_script_url(graph_uri_page (0, 5)), "first","first",Void,Void))
-							if 1 < l_pages then
-								l_cj.add_link (new_link (req.absolute_script_url(graph_uri_page (1, 5)), "next","next",Void,Void))
+						if l_pages > 1 then
+							l_cj.add_link (new_link (req.absolute_script_url(graph_uri_page (0)), "first","Page 1 of " +l_pages.out,Void,Void))
+							if 5  <= l_count then
+								l_cj.add_link (new_link (req.absolute_script_url(graph_uri_page (5)), "next","Page " + (2).out + " of "+l_pages.out,Void,Void))
 							end
-							l_cj.add_link (new_link (req.absolute_script_url(graph_uri_page (l_pages, 5)), "last","last",Void,Void))
+							l_cj.add_link (new_link (req.absolute_script_url(graph_uri_page ((l_pages-1) * 5)), "last","Page " + l_pages.out + " of "+l_pages.out,Void,Void))
 						else
-							l_cj.add_link (new_link (req.absolute_script_url(graph_uri_page (0, 5)), "first","first",Void,Void))
-							l_cj.add_link (new_link (req.absolute_script_url(graph_uri_page (l_pages, 5)), "last","last",Void,Void))
+							l_cj.add_link (new_link (req.absolute_script_url(graph_uri_page (0)), "first","Page " + l_pages.out + " of "+l_pages.out,Void,Void))
+							l_cj.add_link (new_link (req.absolute_script_url(graph_uri_page (0)), "last","Page " + l_pages.out + " of "+l_pages.out,Void,Void))
 						end
 						if attached json.value (l_cj) as l_cj_answer then
 							compute_response_get (req, res, l_cj_answer.representation, {HTTP_STATUS_CODE}.ok)

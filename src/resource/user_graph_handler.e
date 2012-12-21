@@ -161,7 +161,9 @@ feature -- HTTP Methods
 			l_cj: CJ_COLLECTION
 		do
 			create l_helper
-			l_post := l_helper.retrieve_data (req)
+			create l_post.make_empty
+			req.read_input_data_into (l_post)
+
 			if attached extract_cj_request (l_post) as l_graph and then attached ctx.user as auth_user and then attached {WSF_STRING} req.path_parameter ("uid") as l_id and then l_id.is_integer and then attached {USER} user_dao.retrieve_by_id (l_id.integer_value) as l_user then
 					-- save graph
 					-- return the location uri of the graph and return a 201
