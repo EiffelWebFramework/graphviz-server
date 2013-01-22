@@ -55,6 +55,8 @@ feature {NONE} -- Implementation
 		do
 			create h.make
 			h.put_content_type ("application/vnd.collection+json")
+			h.add_header_key_value ("Access-Control-Allow-Origin","*")
+
 			h.put_content_length (a_description.count)
 			h.put_current_date
 			h.put_header_key_value ({HTTP_HEADER_NAMES}.header_www_authenticate, "Basic realm=%"User%"")

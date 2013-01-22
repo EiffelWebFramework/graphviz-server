@@ -136,6 +136,7 @@ feature -- HTTP Methods
 		do
 			create h.make
 			h.put_content_type ("application/vnd.collection+json")
+			h.add_header_key_value ("Access-Control-Allow-Origin","*")
 			l_msg := msg
 			h.put_content_length (l_msg.count)
 			if attached req.request_time as time then
@@ -204,6 +205,8 @@ feature -- HTTP Methods
 				--| sure if that behavior is ok.
 			create h.make
 			h.put_content_type ("application/vnd.collection+json")
+			h.add_header_key_value ("Access-Control-Allow-Origin","*")
+
 			l_location := req.absolute_script_url (user_graph_id_uri (user_id, a_graph.id))
 			h.put_location (l_location)
 			if attached req.request_time as time then
@@ -252,6 +255,8 @@ feature -- HTTP Methods
 		do
 			create h.make
 			h.put_content_type ("application/vnd.collection+json")
+			h.add_header_key_value ("Access-Control-Allow-Origin","*")
+
 			if attached req.request_time as time then
 				h.put_utc_date (time)
 			end
