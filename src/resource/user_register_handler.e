@@ -76,6 +76,8 @@ feature --HTTP Methods
 		do
 			create h.make
 			h.put_content_type ("application/vnd.collection+json")
+			h.add_header_key_value ("Access-Control-Allow-Origin","*")
+
 			l_msg := msg
 			if user_id > 0 and then status_code = {HTTP_STATUS_CODE}.created then
 				l_location := req.absolute_script_url (user_id_uri (user_id))

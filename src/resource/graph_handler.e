@@ -90,6 +90,7 @@ feature -- HTTP Methods
 		do
 			create h.make
 			h.put_content_type ("application/vnd.collection+json")
+			h.add_header_key_value ("Access-Control-Allow-Origin","*")
 			l_msg := msg
 			h.put_content_length (l_msg.count)
 			if attached req.request_time as time then
@@ -131,7 +132,7 @@ feature -- Graph process
 		-- After that it can use an expansion of the following uri template /graph{?index,offset}
 		-- The client can redefine the offset, but maybe we can take a better approach to define
 		-- these values (index, offset)
-		-- TODO pagination should be re-usable 
+		-- TODO pagination should be re-usable
 		local
 			l_count : INTEGER
 			l_pages : INTEGER
