@@ -17,7 +17,6 @@
 				<debug name="nino" enabled="true"/>
 			</option>
 		</library>
-		<library name="eel" location="$EIFFEL_LIBRARY\EWF\contrib\ise_library\text\encryption\eel\eel-safe.ecf" readonly="false"/>
 		<library name="encoder" location="$EIFFEL_LIBRARY\EWF\library\text\encoder\encoder-safe.ecf" readonly="false"/>
 		<library name="http" location="$EIFFEL_LIBRARY\EWF/library/network/protocol/http/http-safe.ecf" readonly="false"/>
 		<library name="json" location="$EIFFEL_LIBRARY\EWF\contrib\library\text\parser\json\library\json-safe.ecf" readonly="false"/>
