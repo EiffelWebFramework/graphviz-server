@@ -8,13 +8,26 @@ class
 
 inherit
 
-	ANY
+	WSF_DEFAULT_SERVICE
 
 	WSF_FILTERED_SERVICE
+		redefine
+			execute
+		end
+
+	WSF_ROUTED_SERVICE
+		rename
+			execute as execute_router
+		redefine
+			execute_default
+		end
+
+	WSF_FILTER
+		rename
+			execute as execute_router
+		end
 
 	WSF_HANDLER_HELPER
-
-	WSF_DEFAULT_SERVICE
 
 	COLLECTION_JSON_HELPER
 
@@ -26,7 +39,6 @@ create
 feature {NONE} -- Initialization
 
 	make
-		local
 		do
 			initialize_router
 			initialize_filter
@@ -36,7 +48,17 @@ feature {NONE} -- Initialization
 		end
 
 	create_filter
+			-- Create `filter'
+		do
+			create {WSF_LOGGING_FILTER} filter
+		end
+
+	setup_router
 		local
+			user_login_authentication_filter,
+			user_authentication_filter,
+			user_graph_authentication_filter: AUTHENTICATION_FILTER
+
 			render_handler: RENDER_HANDLER
 			root_handler: ROOT_HANDLER
 			graph_handler: GRAPH_HANDLER
@@ -44,10 +66,6 @@ feature {NONE} -- Initialization
 			login_handler: USER_LOGIN_HANDLER
 			user_graph_handler: USER_GRAPH_HANDLER
 			user_handler: USER_HANDLER
-			user_login_authentication_filter: AUTHENTICATION_FILTER
-			user_authentication_filter: AUTHENTICATION_FILTER
-			user_graph_authentication_filter: AUTHENTICATION_FILTER
-			l_routing_filter: WSF_ROUTING_FILTER
 		do
 			create root_handler
 			create render_handler
@@ -107,41 +125,20 @@ feature {NONE} -- Initialization
 			router.handle_with_request_methods (user_graph_id_uri_template.template, user_graph_authentication_filter, router.methods_GET_PUT_DELETE)
 
 			router.handle_with_request_methods ("/doc", create {WSF_ROUTER_SELF_DOCUMENTATION_HANDLER}.make_hidden (router), router.methods_GET)
-
-			create l_routing_filter.make (router)
-			l_routing_filter.set_execute_default_action (agent execute_default)
-			filter := l_routing_filter
 		end
 
 	setup_filter
 			-- Setup `filter'
-		local
-			l_logging_filter: WSF_LOGGING_FILTER
 		do
-			create l_logging_filter
-			filter.set_next (l_logging_filter)
+			filter.set_next (Current)
 		end
-
-	initialize_router
-			-- Initialize router
-		do
-			create router.make (10)
-		ensure
-			router_created: router /= Void
-		end
-
-feature -- Access
-
-	router: WSF_ROUTER
-			-- Router used to dispatch the request according to the WSF_REQUEST object
-			-- and associated request methods		
 
 feature -- Execution
 
 	execute (req: WSF_REQUEST; res: WSF_RESPONSE)
 		do
 			initialize_converters (json)
-			filter.execute (req, res)
+			Precursor (req, res)
 		end
 
 	execute_default (req: WSF_REQUEST; res: WSF_RESPONSE)
