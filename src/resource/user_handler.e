@@ -83,7 +83,7 @@ feature -- HTTP Methods
 		do
 			create h.make
 			h.put_content_type ("application/vnd.collection+json")
-			h.add_header_key_value ("Access-Control-Allow-Origin","*")
+--			h.add_header_key_value ("Access-Control-Allow-Origin","*")
 
 			h.put_content_length (msg.count)
 			if attached req.request_time as time then

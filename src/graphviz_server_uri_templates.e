@@ -18,7 +18,7 @@ feature -- Access: collection
 
 	login_uri: STRING = "/login"
 
-
+	queries_uri : STRING = "/search"
 
 feature -- Access: graph	
 
@@ -82,6 +82,12 @@ feature -- Access: user
 		end
 
 
+feature -- Access User-Shopping Cart
+
+	user_cart_uri: URI_TEMPLATE
+		once
+			create Result.make (user_uri + "/{uid}/cart")
+		end
 
 feature -- Access: user_graphs
 

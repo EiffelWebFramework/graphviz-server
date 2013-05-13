@@ -55,6 +55,8 @@ feature {NONE} -- Initialization
 
 	setup_router
 		local
+			l_options_filter: WSF_CORS_OPTIONS_FILTER
+
 			user_login_authentication_filter,
 			user_authentication_filter,
 			user_graph_authentication_filter: AUTHENTICATION_FILTER
@@ -66,7 +68,10 @@ feature {NONE} -- Initialization
 			login_handler: USER_LOGIN_HANDLER
 			user_graph_handler: USER_GRAPH_HANDLER
 			user_handler: USER_HANDLER
+			search_handler : SEARCH_HANDLER
+			l_methods: WSF_REQUEST_METHODS
 		do
+			create l_options_filter.make (router)
 			create root_handler
 			create render_handler
 			create register_handler
@@ -74,6 +79,7 @@ feature {NONE} -- Initialization
 			create login_handler
 			create user_handler
 			create graph_handler
+			create search_handler
 
 				-- user login authentication filter
 			create user_login_authentication_filter
@@ -91,10 +97,17 @@ feature {NONE} -- Initialization
 				-- the client should don't take care of it
 
 				-- root
-			router.map_with_request_methods (create {WSF_URI_MAPPING}.make ("/", root_handler), router.methods_GET)
+			create l_methods
+			l_methods.enable_options
+			l_methods.enable_get
+			router.map_with_request_methods (create {WSF_URI_MAPPING}.make ("/", root_handler), l_methods)
 
 				-- register a user
-			router.map_with_request_methods (create {WSF_URI_MAPPING}.make_trailing_slash_ignored (register_uri, register_handler), router.methods_GET_POST)
+			create l_methods
+			l_methods.enable_options
+			l_methods.enable_get
+			l_methods.enable_post
+			router.map_with_request_methods (create {WSF_URI_MAPPING}.make_trailing_slash_ignored (register_uri, register_handler), l_methods)
 
 				-- login a user
 			router.map_with_request_methods (create {WSF_URI_CONTEXT_MAPPING [FILTER_HANDLER_CONTEXT]}.make_trailing_slash_ignored (login_uri, user_login_authentication_filter), router.methods_GET)
@@ -123,6 +136,10 @@ feature {NONE} -- Initialization
 				-- user_graph handler
 			router.handle_with_request_methods (user_graph_uri.template, user_graph_authentication_filter, router.methods_GET_POST)
 			router.handle_with_request_methods (user_graph_id_uri_template.template, user_graph_authentication_filter, router.methods_GET_PUT_DELETE)
+
+				-- queries
+			router.map_with_request_methods (create {WSF_URI_MAPPING}.make_trailing_slash_ignored (queries_uri, search_handler), router.methods_GET)
+
 
 			router.handle_with_request_methods ("/doc", create {WSF_ROUTER_SELF_DOCUMENTATION_HANDLER}.make_hidden (router), router.methods_GET)
 		end
@@ -203,6 +220,9 @@ feature -- Execution
 				fmts.set_supported_formats (lst)
 			end
 		end
+
+
+
 
 note
 	copyright: "2011-2012, Javier Velilla and others"

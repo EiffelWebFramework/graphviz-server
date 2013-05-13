@@ -12,22 +12,22 @@
 		</option>
 		<setting name="concurrency" value="thread"/>
 		<library name="base" location="$ISE_LIBRARY\library\base\base-safe.ecf"/>
+		<library name="collection_json" location="$EIFFEL_LIBRARY\CJ\library\cj-safe.ecf" readonly="false"/>
 		<library name="connector_nino" location="$EIFFEL_LIBRARY\EWF\library\server\ewsgi\connectors\nino\nino-safe.ecf" readonly="false">
 			<option debug="true">
 				<debug name="nino" enabled="true"/>
 			</option>
 		</library>
 		<library name="encoder" location="$EIFFEL_LIBRARY\EWF\library\text\encoder\encoder-safe.ecf" readonly="false"/>
-		<library name="http" location="$EIFFEL_LIBRARY\EWF/library/network/protocol/http/http-safe.ecf" readonly="false"/>
-		<library name="json" location="$EIFFEL_LIBRARY\EWF\contrib\library\text\parser\json\library\json-safe.ecf" readonly="false"/>
-		<library name="uri_template" location="$EIFFEL_LIBRARY\EWF/library/text/parser/uri_template/uri_template-safe.ecf" readonly="false"/>
-		<library name="wsf" location="$EIFFEL_LIBRARY\EWF\library\server\wsf\wsf-safe.ecf" readonly="false"/>
-		<library name="wsf_router_context" location="$EIFFEL_LIBRARY\EWF\library\server\wsf\wsf_router_context-safe.ecf" readonly="false"/>
-		<library name="wsf_extension" location="$EIFFEL_LIBRARY\EWF\library\server\wsf\wsf_extension-safe.ecf" readonly="false"/>
+		<library name="http" location="$EIFFEL_LIBRARY\EWF\library\network\protocol\http\http-safe.ecf" readonly="false"/>
 		<library name="http_authorization" location="$EIFFEL_LIBRARY\EWF\library\server\authentication\http_authorization\http_authorization-safe.ecf" readonly="false"/>
-		<library name="collection_json" location="$EIFFEL_LIBRARY\CJ\library\cj-safe.ecf" readonly="false"/>
-		<library name="sqlite" location="$ISE_LIBRARY\unstable\library\persistency\database\sqlite3\sqlite-safe.ecf" readonly="false"/>	
-                <library name="process" location="$ISE_LIBRARY\library\process\process-safe.ecf"/>
+		<library name="json" location="$EIFFEL_LIBRARY\EWF\contrib\library\text\parser\json\library\json-safe.ecf" readonly="false"/>
+		<library name="process" location="$ISE_LIBRARY\library\process\process-safe.ecf"/>
+		<library name="sqlite" location="$ISE_LIBRARY\unstable\library\persistency\database\sqlite3\sqlite-safe.ecf" readonly="false"/>
+		<library name="uri_template" location="$EIFFEL_LIBRARY\EWF\library\text\parser\uri_template\uri_template-safe.ecf" readonly="false"/>
+		<library name="wsf" location="$EIFFEL_LIBRARY\EWF\library\server\wsf\wsf-safe.ecf" readonly="false"/>
+		<library name="wsf_extension" location="$EIFFEL_LIBRARY\EWF\library\server\wsf\wsf_extension-safe.ecf" readonly="false"/>
+		<library name="wsf_router_context" location="$EIFFEL_LIBRARY\EWF\library\server\wsf\wsf_router_context-safe.ecf" readonly="false"/>
 	</target>
 	<target name="graphviz_server" extends="common">
 		<root class="GRAPHVIZ_SERVER" feature="make"/>
@@ -38,5 +38,20 @@
 		<root class="GRAPHVIZ_SERVER" feature="make"/>
 		<library name="default_openshift" location="$EIFFEL_LIBRARY\EWF\library\server\wsf\default\openshift-safe.ecf" readonly="false"/>
 		<cluster name="src" location="src\" recursive="true"/>
+	</target>
+	<target name="graphviz_server_test" extends="common">
+		<root class="GRAPHVIZ_SERVER_TEST" feature="make"/>
+		<library name="default_nino" location="$EIFFEL_LIBRARY\EWF\library\server\wsf\default\nino-safe.ecf" readonly="false"/>
+		<library name="thread" location="$ISE_LIBRARY\library\thread\thread-safe.ecf"/>
+		<library name="http_client" location="$EIFFEL_LIBRARY\EWF\library\network\http_client\http_client-safe.ecf"/>
+		<library name="testing" location="$ISE_LIBRARY\library\testing\testing-safe.ecf"/>
+		<library name="ewsgi" location="$EIFFEL_LIBRARY\EWF\library\server\ewsgi\ewsgi-safe.ecf" readonly="false">
+			<option>
+				<assertions precondition="true" postcondition="true" check="true" supplier_precondition="true"/>
+			</option>
+		</library>
+		
+		<cluster name="src" location="src\" recursive="true"/>
+		<cluster name="test" location="test\" recursive="true"/>
 	</target>
 </system>

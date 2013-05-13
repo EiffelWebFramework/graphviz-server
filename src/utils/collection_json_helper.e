@@ -47,6 +47,24 @@ feature -- Collection + JSON
 			end
 		end
 
+
+	new_query (href: STRING_32; rel: STRING_32; prompt: detachable STRING_32; name: detachable STRING_32; data: detachable CJ_DATA) : CJ_QUERY
+		do
+			create Result.make (href, rel)
+			if attached prompt as l_prompt then
+				Result.set_prompt (l_prompt)
+			end
+
+			if attached name as l_name then
+				Result.set_name (l_name)
+			end
+
+			if attached data as l_data then
+				Result.add_data (l_data)
+			end
+		end
+
+
 	json_to_cj (post: STRING): detachable CJ_COLLECTION
 		local
 			parser: JSON_PARSER
@@ -112,6 +130,7 @@ feature -- Collection + JSON
 			col.add_link (new_link (req.absolute_script_url (graph_uri), "graphs", "Home Graph", Void, Void))
 			col.add_link (new_link (req.absolute_script_url (register_uri), "register", "User Register", Void, Void))
 			col.add_link (new_link (req.absolute_script_url (login_uri), "login", "User Login", Void, Void))
+			col.add_query (new_query (req.absolute_script_url (queries_uri), "search", "Search by title", Void, new_data ("search", Void, "search")))
 			Result := col
 		end
 
@@ -137,7 +156,15 @@ feature -- Collection + JSON
 			            }
 			            
 			        ],
-			        "queries": [],
+			        "queries": [{
+			        	"href":"$QUERIES_URL",
+			        	"rel":"search",
+			        	"prompt":"Search by title",
+			        	"data" : [
+			        			{"name":"title","value":""}
+			        		]
+			        	}
+			        	],
 			        "templates": [],
 			        "version": "1.0"
 			    	}

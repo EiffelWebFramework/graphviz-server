@@ -222,6 +222,40 @@ feature -- Query
 			Result := last_retrieve_all_result
 		end
 
+	retrieve_all_by_title (title: STRING): detachable LIST [GRAPH]
+			-- retrive all graphs from db by  title
+		local
+			l_query: SQLITE_QUERY_STATEMENT
+		do
+				-- clean all the previous results
+			create {ARRAYED_LIST [GRAPH]} last_retrieve_all_by_title_result.make (0)
+
+				-- Query the contents of the Example table
+			create l_query.make ("SELECT graph_id,description,title,content FROM GRAPHS WHERE title = :TITLE;", db_mgr)
+			check
+				l_query_is_compiled: l_query.is_compiled
+			end
+			l_query.execute_with_arguments (agent  (ia_row: SQLITE_RESULT_ROW): BOOLEAN
+				local
+					l_graph: GRAPH
+					l_descr: detachable STRING_32
+					l_title: detachable STRING_32
+				do
+					if not ia_row.is_null (2) then
+						l_descr := ia_row.string_value (2).to_string_32
+					end
+					if not ia_row.is_null (3) then
+						l_title := ia_row.string_value (3).to_string_32
+					end
+					create l_graph.make (ia_row.string_value (4).to_string_32, l_title, l_descr)
+					l_graph.set_id (ia_row.integer_value (1))
+					if attached last_retrieve_all_by_title_result as lrq then
+						lrq.force (l_graph)
+					end
+				end, [create {SQLITE_STRING_ARG}.make (":TITLE", title)])
+			Result := last_retrieve_all_by_title_result
+		end
+
 feature -- Update
 
 	update (a_graph: GRAPH; user_id: INTEGER)
@@ -328,6 +362,8 @@ feature -- DB handler
 feature {NONE} -- Implementation
 
 	last_retrieve_all_result: detachable LIST [GRAPH]
+
+	last_retrieve_all_by_title_result: detachable LIST [GRAPH]
 
 	last_retrieve_page_result: detachable LIST [GRAPH]
 
