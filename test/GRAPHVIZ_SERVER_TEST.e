@@ -1,6 +1,5 @@
 class GRAPHVIZ_SERVER_TEST
 
-
 create
 	make
 
