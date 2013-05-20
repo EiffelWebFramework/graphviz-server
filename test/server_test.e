@@ -33,7 +33,6 @@ feature -- Launch
 			create e
 			e.sleep (1_000_000_000 * 5)
 			port_number := app.port
---			create l_launcher.make_and_launch (a_service, opts)
 		end
 
 feature -- Shutdown
