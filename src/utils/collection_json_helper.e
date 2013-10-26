@@ -1,6 +1,5 @@
 note
 	description: "Summary description for {COLLECTION_JSON_HELPER}."
-	author: ""
 	date: "$Date$"
 	revision: "$Revision$"
 
@@ -47,23 +46,19 @@ feature -- Collection + JSON
 			end
 		end
 
-
-	new_query (href: STRING_32; rel: STRING_32; prompt: detachable STRING_32; name: detachable STRING_32; data: detachable CJ_DATA) : CJ_QUERY
+	new_query (href: STRING_32; rel: STRING_32; prompt: detachable STRING_32; name: detachable STRING_32; data: detachable CJ_DATA): CJ_QUERY
 		do
 			create Result.make (href, rel)
 			if attached prompt as l_prompt then
 				Result.set_prompt (l_prompt)
 			end
-
 			if attached name as l_name then
 				Result.set_name (l_name)
 			end
-
 			if attached data as l_data then
 				Result.add_data (l_data)
 			end
 		end
-
 
 	json_to_cj (post: STRING): detachable CJ_COLLECTION
 		local

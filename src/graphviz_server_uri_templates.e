@@ -6,7 +6,7 @@ note
 class
 	GRAPHVIZ_SERVER_URI_TEMPLATES
 
-feature -- Access: collection	
+feature -- Access: collection
 
 	home_uri: STRING = "/"
 
@@ -18,14 +18,14 @@ feature -- Access: collection
 
 	login_uri: STRING = "/login"
 
-	queries_uri : STRING = "/search"
+	queries_uri: STRING = "/search"
 
-feature -- Access: graph	
+feature -- Access: graph
 
-    graph_uri_page_template : URI_TEMPLATE
-    	once
-    		create Result.make (graph_uri + "{?offset}")
-    	end
+	graph_uri_page_template: URI_TEMPLATE
+		once
+			create Result.make (graph_uri + "{?offset}")
+		end
 
 	graph_id_type_uri_template: URI_TEMPLATE
 		once
@@ -56,7 +56,7 @@ feature -- Access: graph
 			Result := graph_id_uri_template.expanded_string (ht)
 		end
 
-	graph_uri_page (an_offset:INTEGER) : STRING
+	graph_uri_page (an_offset: INTEGER): STRING
 		local
 			ht: HASH_TABLE [detachable ANY, STRING_8]
 		do
@@ -65,7 +65,7 @@ feature -- Access: graph
 			Result := graph_uri_page_template.expanded_string (ht)
 		end
 
-feature -- Access: user	
+feature -- Access: user
 
 	user_id_uri_template: URI_TEMPLATE
 		once
@@ -81,7 +81,6 @@ feature -- Access: user
 			Result := user_id_uri_template.expanded_string (ht)
 		end
 
-
 feature -- Access User-Shopping Cart
 
 	user_cart_uri: URI_TEMPLATE
@@ -95,7 +94,6 @@ feature -- Access: user_graphs
 		once
 			create Result.make (user_uri + "/{uid}/graph")
 		end
-
 
 	user_graph_id_type_uri_template: URI_TEMPLATE
 		once
@@ -111,13 +109,12 @@ feature -- Access: user_graphs
 			Result := user_graph_uri.expanded_string (ht)
 		end
 
-
 	user_graph_id_uri_template: URI_TEMPLATE
 		once
 			create Result.make (user_graph_uri.template + "/{gid}")
 		end
 
-	user_graph_id_uri (u_id: like {USER}.id;g_id: like {GRAPH}.id): STRING_8
+	user_graph_id_uri (u_id: like {USER}.id; g_id: like {GRAPH}.id): STRING_8
 		local
 			ht: HASH_TABLE [detachable ANY, STRING_8]
 		do
@@ -126,7 +123,6 @@ feature -- Access: user_graphs
 			ht.force (g_id, "gid")
 			Result := user_graph_id_uri_template.expanded_string (ht)
 		end
-
 
 	user_graph_id_type_uri (u_id: like {USER}.id; g_id: like {GRAPH}.id; a_type: READABLE_STRING_GENERAL): STRING_8
 		local
@@ -138,6 +134,5 @@ feature -- Access: user_graphs
 			ht.force (a_type, "type")
 			Result := user_graph_id_type_uri_template.expanded_string (ht)
 		end
-
 
 end

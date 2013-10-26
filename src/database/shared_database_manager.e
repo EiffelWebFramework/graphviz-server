@@ -1,6 +1,5 @@
 note
 	description: "Summary description for {SHARED_DATABASE_MANAGER}."
-	author: ""
 	date: "$Date$"
 	revision: "$Revision$"
 

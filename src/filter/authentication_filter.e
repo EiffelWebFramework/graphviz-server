@@ -9,14 +9,11 @@ class
 
 inherit
 
-	WSF_FILTER_CONTEXT_HANDLER [FILTER_HANDLER_CONTEXT]
+	WSF_FILTER
 
-	WSF_URI_TEMPLATE_CONTEXT_HANDLER [FILTER_HANDLER_CONTEXT]
+	WSF_URI_TEMPLATE_HANDLER
 
-	WSF_URI_CONTEXT_HANDLER [FILTER_HANDLER_CONTEXT]
-		undefine
-			new_mapping
-		end
+	COLLECTION_JSON_HELPER
 
 	COLLECTION_JSON_HELPER
 
@@ -24,24 +21,28 @@ inherit
 
 feature -- Basic operations
 
-	execute (ctx: FILTER_HANDLER_CONTEXT; req: WSF_REQUEST; res: WSF_RESPONSE)
+	execute (req: WSF_REQUEST; res: WSF_RESPONSE)
 			-- Execute the filter
 		local
 			l_auth: HTTP_AUTHORIZATION
-			l_cj : CJ_COLLECTION
+			l_cj: CJ_COLLECTION
 		do
 			create l_auth.make (req.http_authorization)
-			if (attached l_auth.type as l_auth_type and then l_auth_type.is_equal ("basic")) and
-			    attached l_auth.login as l_auth_login and then attached l_auth.password as l_auth_password
-			    and then attached {USER} user_dao.retrieve_by_name_and_password (l_auth_login, l_auth_password) as l_user then
-				ctx.set_user (l_user)
-				execute_next (ctx, req, res)
-			else
+				-- A valid user
+			if (attached l_auth.type as l_auth_type and then l_auth_type.is_equal ("basic")) and attached l_auth.login as l_auth_login and then attached l_auth.password as l_auth_password and then attached {USER} user_dao.retrieve_by_name_and_password (l_auth_login, l_auth_password) as l_user and then l_user.password.same_string (l_auth_password) then
+				req.set_execution_variable ("user", l_user)
+				execute_next (req, res)
+--			elseif -- Anonymous
+--				attached l_auth.type as l_auth_type and then l_auth_type.is_equal ("basic") and attached l_auth.login as l_auth_login and then attached l_auth.password as l_auth_password and then attached l_auth_login.same_string ("anonymous")
+--			then
+--				req.set_execution_variable ("user", create {USER}.make (l_auth_login, ""))
+--				execute_next (req, res)
+			else -- Not allowed
 				initialize_converters (json)
-			    l_cj := collection_json_root_builder (req)
+				l_cj := collection_json_root_builder (req)
 				l_cj.set_error (new_error ("Unauthorized", "004", "The credentials are not valid"))
 				if attached json.value (l_cj) as l_cj_answer then
-					handle_unauthorized (l_cj_answer.representation, req , res)
+					handle_unauthorized (l_cj_answer.representation, req, res)
 				end
 			end
 		end
@@ -55,8 +56,6 @@ feature {NONE} -- Implementation
 		do
 			create h.make
 			h.put_content_type ("application/vnd.collection+json")
-			h.add_header_key_value ("Access-Control-Allow-Origin","*")
-
 			h.put_content_length (a_description.count)
 			h.put_current_date
 			h.put_header_key_value ({HTTP_HEADER_NAMES}.header_www_authenticate, "Basic realm=%"User%"")

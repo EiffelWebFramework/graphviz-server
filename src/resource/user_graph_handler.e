@@ -1,6 +1,5 @@
 note
 	description: "USER_GRAPH_HANDLER handle the graph resources for a particular user, it allow create, get one or all, delete and updates graphs per user"
-	author: ""
 	date: "$Date$"
 	revision: "$Revision$"
 
@@ -9,11 +8,11 @@ class
 
 inherit
 
-	WSF_FILTER_CONTEXT_HANDLER [FILTER_HANDLER_CONTEXT]
+	WSF_FILTER
 
-	WSF_URI_TEMPLATE_CONTEXT_HANDLER [FILTER_HANDLER_CONTEXT]
+	WSF_URI_TEMPLATE_HANDLER
 
-	WSF_RESOURCE_CONTEXT_HANDLER_HELPER [FILTER_HANDLER_CONTEXT]
+	WSF_RESOURCE_HANDLER_HELPER
 		redefine
 			do_get,
 			do_put,
@@ -29,11 +28,11 @@ inherit
 
 feature -- execute
 
-	execute (ctx: FILTER_HANDLER_CONTEXT; req: WSF_REQUEST; res: WSF_RESPONSE)
+	execute (req: WSF_REQUEST; res: WSF_RESPONSE)
 			-- Execute request handler
 		do
-			execute_methods (ctx, req, res)
-			execute_next (ctx, req, res)
+			execute_methods (req, res)
+			execute_next (req, res)
 		end
 
 feature -- HTTP Methods
@@ -43,7 +42,7 @@ feature -- HTTP Methods
 
 		--| Right now conditional GET and PUT are not implemented.
 
-	do_get (ctx: FILTER_HANDLER_CONTEXT; req: WSF_REQUEST; res: WSF_RESPONSE)
+	do_get (req: WSF_REQUEST; res: WSF_RESPONSE)
 			-- Using GET to retrieve resource information.
 			-- If the GET request is SUCCESS, we response with
 			-- 200 OK, and a representation of the root collection JSON
@@ -62,11 +61,11 @@ feature -- HTTP Methods
 				--| handler possibly the SEARCH_HANLDER.
 			initialize_converters (json)
 			if attached req.orig_path_info as orig_path then
-				if attached {WSF_STRING} req.path_parameter ("uid") as l_id and then l_id.is_integer and then attached {WSF_STRING} req.path_parameter ("gid") as g_id and then g_id.is_integer and then attached ctx.user as auth_user and then attached user_dao.retrieve_by_id (l_id.integer_value) as l_user then
+				if attached {WSF_STRING} req.path_parameter ("uid") as l_id and then l_id.is_integer and then attached {WSF_STRING} req.path_parameter ("gid") as g_id and then g_id.is_integer and then attached {USER} req.execution_variable ("user") as auth_user and then attached user_dao.retrieve_by_id (l_id.integer_value) as l_user then
 						-- retrieve a graph identidied by uid and gid
 					if l_user.id = auth_user.id then
 						process_graph_by_user (req, res, g_id.integer_value, l_id.integer_value)
-					elseif attached ctx.user as l_auth_user then
+					elseif attached {USER} req.execution_variable ("user") as l_auth_user then
 							-- Trying to access another user that the authenticated one,
 							-- which is forbidden in this example...
 						l_cj := collection_json_root_builder (req)
@@ -75,12 +74,12 @@ feature -- HTTP Methods
 							compute_response (req, res, l_cj_answer.representation, {HTTP_STATUS_CODE}.forbidden)
 						end
 					end
-				elseif attached {WSF_STRING} req.path_parameter ("uid") as l_id and then l_id.is_integer and then attached ctx.user as auth_user and then attached {USER} user_dao.retrieve_by_id (l_id.integer_value) as l_user then
+				elseif attached {WSF_STRING} req.path_parameter ("uid") as l_id and then l_id.is_integer and then attached {USER} req.execution_variable ("user") as auth_user and then attached {USER} user_dao.retrieve_by_id (l_id.integer_value) as l_user then
 						-- retrieve all graphs
 
 					if l_user.id = auth_user.id then
 						process_graphs_by_user (req, res, l_id.integer_value)
-					elseif attached ctx.user as l_auth_user then
+					elseif attached {USER} req.execution_variable ("user") as l_auth_user then
 							-- Trying to access another user that the authenticated one,
 							-- which is forbidden in this example...
 						l_cj := collection_json_root_builder (req)
@@ -136,7 +135,6 @@ feature -- HTTP Methods
 		do
 			create h.make
 			h.put_content_type ("application/vnd.collection+json")
-			h.add_header_key_value ("Access-Control-Allow-Origin","*")
 			l_msg := msg
 			h.put_content_length (l_msg.count)
 			if attached req.request_time as time then
@@ -147,7 +145,7 @@ feature -- HTTP Methods
 			res.put_string (l_msg)
 		end
 
-	do_post (ctx: FILTER_HANDLER_CONTEXT; req: WSF_REQUEST; res: WSF_RESPONSE)
+	do_post (req: WSF_REQUEST; res: WSF_RESPONSE)
 			-- Here the convention is the following.
 			-- POST is used for creation and the server determines the URI
 			-- of the created resource.
@@ -165,7 +163,7 @@ feature -- HTTP Methods
 			create l_post.make_empty
 			req.read_input_data_into (l_post)
 
-			if attached extract_cj_request (l_post) as l_graph and then attached ctx.user as auth_user and then attached {WSF_STRING} req.path_parameter ("uid") as l_id and then l_id.is_integer and then attached {USER} user_dao.retrieve_by_id (l_id.integer_value) as l_user then
+			if attached extract_cj_request (l_post) as l_graph and then attached {USER} req.execution_variable ("user") as auth_user and then attached {WSF_STRING} req.path_parameter ("uid") as l_id and then l_id.is_integer and then attached {USER} user_dao.retrieve_by_id (l_id.integer_value) as l_user then
 					-- save graph
 					-- return the location uri of the graph and return a 201
 					--| Here maybe we need to verify if the save action in
@@ -175,7 +173,7 @@ feature -- HTTP Methods
 					graph_dao.insert (l_graph, l_id.integer_value)
 					l_graph.set_id (graph_dao.last_row_id.to_integer_32)
 					compute_response_post (req, res, l_id.integer_value, l_graph)
-				elseif attached ctx.user as l_auth_user then
+				elseif attached {USER} req.execution_variable ("user") as l_auth_user then
 						-- Trying to access another user that the authenticated one,
 						-- which is forbidden in this example...
 					l_cj := collection_json_root_builder (req)
@@ -216,7 +214,7 @@ feature -- HTTP Methods
 			res.put_header_text (h.string)
 		end
 
-	do_delete (ctx: FILTER_HANDLER_CONTEXT; req: WSF_REQUEST; res: WSF_RESPONSE)
+	do_delete (req: WSF_REQUEST; res: WSF_RESPONSE)
 			-- Here we use DELETE to cancel a graph description.
 			-- 200 if is ok
 			-- 404 Resource not found
@@ -225,11 +223,11 @@ feature -- HTTP Methods
 			l_cj : CJ_COLLECTION
 		do
 			if attached req.orig_path_info as orig_path then
-				if attached {WSF_STRING} req.path_parameter ("uid") as l_id and then l_id.is_integer and then attached ctx.user as auth_user and then attached {WSF_STRING} req.path_parameter ("gid") as g_id and then g_id.is_integer and then attached {USER} user_dao.retrieve_by_id (l_id.integer_value) as l_user then
+				if attached {WSF_STRING} req.path_parameter ("uid") as l_id and then l_id.is_integer and then attached {USER} req.execution_variable ("user") as auth_user and then attached {WSF_STRING} req.path_parameter ("gid") as g_id and then g_id.is_integer and then attached {USER} user_dao.retrieve_by_id (l_id.integer_value) as l_user then
 					if l_user.id = auth_user.id then
 						graph_dao.delete_by_id (g_id.integer_value, l_id.integer_value)
 						compute_response_delete (req, res)
-					elseif attached ctx.user as l_auth_user then
+					elseif attached {USER} req.execution_variable ("user") as l_auth_user then
 							-- Trying to access another user that the authenticated one,
 							-- which is forbidden in this example...
 							l_cj := collection_json_root_builder (req)
@@ -264,7 +262,7 @@ feature -- HTTP Methods
 			res.put_header_text (h.string)
 		end
 
-	do_put (ctx: FILTER_HANDLER_CONTEXT; req: WSF_REQUEST; res: WSF_RESPONSE)
+	do_put (req: WSF_REQUEST; res: WSF_RESPONSE)
 			-- Updating a resource with PUT
 			-- A successful PUT request will not create a new resource, instead it will
 			-- change the state of the resource identified by the current uri.
@@ -282,7 +280,7 @@ feature -- HTTP Methods
 			create l_helper
 			l_put := l_helper.retrieve_data (req)
 			if attached req.orig_path_info as orig_path then
-				if attached {WSF_STRING} req.path_parameter ("uid") as l_id and then l_id.is_integer and then attached {WSF_STRING} req.path_parameter ("gid") as g_id and then g_id.is_integer and then attached ctx.user as auth_user and then attached {USER} user_dao.retrieve_by_id (l_id.integer_value) as l_user then
+				if attached {WSF_STRING} req.path_parameter ("uid") as l_id and then l_id.is_integer and then attached {WSF_STRING} req.path_parameter ("gid") as g_id and then g_id.is_integer and then attached {USER} req.execution_variable ("user") as auth_user and then attached {USER} user_dao.retrieve_by_id (l_id.integer_value) as l_user then
 					if l_user.id = auth_user.id then
 						if attached extract_cj_request (l_put) as lreq_graph and then attached graph_dao.retrieve_by_id_and_user_id (g_id.integer_value, l_id.integer_value) as ldb_graph then
 							ldb_graph.set_description (lreq_graph.description)
@@ -297,7 +295,7 @@ feature -- HTTP Methods
 									compute_response (req, res, l_cj_answer.representation, {HTTP_STATUS_CODE}.not_found)
 								end
 						end
-					elseif attached ctx.user as l_auth_user then
+					elseif attached {USER} req.execution_variable ("user") as l_auth_user then
 							-- Trying to access another user that the authenticated one,
 							-- which is forbidden in this example...
 							l_cj := collection_json_root_builder (req)

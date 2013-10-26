@@ -1,6 +1,5 @@
 note
 	description: "Summary description for {LOGGER}."
-	author: ""
 	date: "$Date$"
 	revision: "$Revision$"
 
@@ -8,6 +7,7 @@ class
 	FILE_LOGGER
 
 inherit
+
 	LOGGER
 
 create

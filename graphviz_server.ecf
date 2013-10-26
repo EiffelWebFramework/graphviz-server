@@ -12,7 +12,7 @@
 		</option>
 		<setting name="concurrency" value="thread"/>
 		<library name="base" location="$ISE_LIBRARY\library\base\base-safe.ecf"/>
-		<library name="collection_json" location="$EIFFEL_LIBRARY\CJ\library\cj-safe.ecf" readonly="false"/>
+		<library name="collection_json" location="$EIFFEL_LIBRARY\collection_json\library\collection+json-safe.ecf" readonly="false"/>
 		<library name="connector_nino" location="$EIFFEL_LIBRARY\EWF\library\server\ewsgi\connectors\nino\nino-safe.ecf" readonly="false">
 			<option debug="true">
 				<debug name="nino" enabled="true"/>

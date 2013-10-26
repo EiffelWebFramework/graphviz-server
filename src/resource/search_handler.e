@@ -1,6 +1,5 @@
 note
 	description: "Summary description for {SEARCH_HANDLER}."
-	author: ""
 	date: "$Date$"
 	revision: "$Revision$"
 
@@ -8,6 +7,8 @@ class
 	SEARCH_HANDLER
 
 inherit
+
+	WSF_FILTER
 
 	WSF_URI_HANDLER
 		rename
@@ -35,11 +36,14 @@ inherit
 	REFACTORING_HELPER
 
 
-feature -- Initialization
-
-
-
 feature -- execute
+
+	execute (req: WSF_REQUEST; res: WSF_RESPONSE)
+			-- Execute request handler
+		do
+			execute_methods (req, res)
+			execute_next (req, res)
+		end
 
 	uri_execute (req: WSF_REQUEST; res: WSF_RESPONSE)
 			-- Execute request handler
@@ -55,15 +59,12 @@ feature -- execute
 
 feature -- HTTP Methods
 
-
 	do_get (req: WSF_REQUEST; res: WSF_RESPONSE)
 			-- Using GET to retrieve resource information.
 			-- If the GET request is SUCCESS, we response with
 			-- 200 OK, and a representation of the root collection JSON
 			-- If the GET request is not SUCCESS, we response with
 			-- 404 Resource not found and their corresponding error in collection json
-		local
-			l_graphs : detachable LIST[GRAPH]
 		do
 			if attached req.query_parameter ("search") as l_query_parameter then
 				if l_query_parameter.is_string and then attached l_query_parameter.as_string.value as l_value then
@@ -88,7 +89,6 @@ feature -- HTTP Methods
 		do
 			create h.make
 			h.put_content_type ("application/vnd.collection+json")
-			h.add_header_key_value ("Access-Control-Allow-Origin","*")
 			l_msg := msg
 			h.put_content_length (l_msg.count)
 			if attached req.request_time as time then
@@ -98,6 +98,5 @@ feature -- HTTP Methods
 			res.put_header_text (h.string)
 			res.put_string (l_msg)
 		end
-
 
 end

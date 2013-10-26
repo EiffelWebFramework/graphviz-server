@@ -1,6 +1,5 @@
 note
 	description: "Summary description for {GRAPHVIZ_UTILITIES}."
-	author: ""
 	date: "$Date$"
 	revision: "$Revision$"
 
@@ -53,8 +52,7 @@ feature -- Supported formats
 
 feature -- Render
 
-	render_graph_into_file (a_graph_file_name: READABLE_STRING_GENERAL; a_type: READABLE_STRING_GENERAL;
-			a_file_name: READABLE_STRING_GENERAL; a_error_buffer: detachable STRING_8)
+	render_graph_into_file (a_graph_file_name: READABLE_STRING_GENERAL; a_type: READABLE_STRING_GENERAL; a_file_name: READABLE_STRING_GENERAL; a_error_buffer: detachable STRING_8)
 		require
 			ascii_graph_file_name: a_graph_file_name.is_valid_as_string_8
 			ascii_file_name: a_file_name.is_valid_as_string_8
@@ -94,7 +92,7 @@ feature {NONE} -- Initialization
 			fn: FILE_NAME
 		once
 			create e
-			if attached e.get ("GRAPHVIZ_DOT_DIR") as d then
+			if attached e.item ("GRAPHVIZ_DOT_DIR") as d then
 				create fn.make_from_string (d)
 				fn.set_file_name ("dot")
 				Result := fn.string

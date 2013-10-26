@@ -1,6 +1,5 @@
 note
 	description: "Summary description for {GRAPH_MANAGER}."
-	author: ""
 	date: "$Date$"
 	revision: "$Revision$"
 
@@ -67,7 +66,7 @@ feature -- Query
 			Result := last_retrieve_by_id_result
 		end
 
-	retrieve_page (index : INTEGER; offset : INTEGER): detachable LIST [GRAPH]
+	retrieve_page (index: INTEGER; offset: INTEGER): detachable LIST [GRAPH]
 			-- retrive page graphs per index and offset.
 		local
 			l_query: SQLITE_QUERY_STATEMENT
@@ -76,7 +75,7 @@ feature -- Query
 			create {ARRAYED_LIST [GRAPH]} last_retrieve_page_result.make (0)
 
 				-- Query the contents of the Example table
-			create l_query.make ("SELECT graph_id,description,title,content FROM GRAPHS LIMIT :INDEX , :OFFSET;", db_mgr)
+			create l_query.make ("SELECT graph_id,description,title,content FROM GRAPHS LIMIT :INDEX  OFFSET :OFFSET;", db_mgr)
 			check
 				l_query_is_compiled: l_query.is_compiled
 			end
@@ -97,7 +96,7 @@ feature -- Query
 					if attached last_retrieve_page_result as lrq then
 						lrq.force (l_graph)
 					end
-				end,[create {SQLITE_INTEGER_ARG}.make (":INDEX", index), create {SQLITE_INTEGER_ARG}.make (":OFFSET", offset)])
+				end, [create {SQLITE_INTEGER_ARG}.make (":INDEX", index), create {SQLITE_INTEGER_ARG}.make (":OFFSET", offset)])
 			Result := last_retrieve_page_result
 		end
 
@@ -369,7 +368,7 @@ feature {NONE} -- Implementation
 
 	last_retrieve_by_id_result: detachable GRAPH
 
-	last_integer_count : INTEGER
+	last_integer_count: INTEGER
 
 	imp_db_mgr: detachable SQLITE_DATABASE
 
