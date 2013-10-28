@@ -69,7 +69,7 @@ feature {NONE} -- Initialization
 				-- the client should don't take care of it
 
 				-- Home
-			configure_root
+			configure_api_root
 
 				-- Register a user
 			configure_register_user
@@ -100,6 +100,7 @@ feature {NONE} -- Initialization
 
 			create fhdl.make_hidden ("www")
 			fhdl.set_directory_index (<<"index.html">>)
+			router.handle_with_request_methods ("/", fhdl, router.methods_GET)
 		end
 
 	setup_filter
@@ -116,7 +117,7 @@ feature {NONE} -- Initialization
 
 feature -- Configure Resources Routes
 
-	configure_root
+	configure_api_root
 		local
 			l_options_filter: WSF_CORS_OPTIONS_FILTER
 			l_root_handler: ROOT_HANDLER
@@ -128,7 +129,7 @@ feature -- Configure Resources Routes
 			create l_methods
 			l_methods.enable_options
 			l_methods.enable_get
-			router.handle_with_request_methods ("/", create {WSF_URI_TEMPLATE_AGENT_HANDLER}.make (agent l_options_filter.execute), l_methods)
+			router.handle_with_request_methods (api_uri, create {WSF_URI_TEMPLATE_AGENT_HANDLER}.make (agent l_options_filter.execute), l_methods)
 		end
 
 	configure_register_user
@@ -255,7 +256,7 @@ feature -- Configure Resources Routes
 			create l_methods
 			l_methods.enable_options
 			l_methods.enable_get
-			l_methods.enable_post
+			l_methods.enable_put
 			l_methods.enable_delete
 			router.handle_with_request_methods (user_graph_id_uri_template.template, create {WSF_URI_TEMPLATE_AGENT_HANDLER}.make (agent l_options_filter.execute), l_methods)
 		end

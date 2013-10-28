@@ -10,15 +10,17 @@ feature -- Access: collection
 
 	home_uri: STRING = "/"
 
-	graph_uri: STRING = "/graph"
+	api_uri: STRING = "/api"
 
-	user_uri: STRING = "/user"
+	graph_uri: STRING = "/api/graph"
 
-	register_uri: STRING = "/register"
+	user_uri: STRING = "/api/user"
 
-	login_uri: STRING = "/login"
+	register_uri: STRING = "/api/register"
 
-	queries_uri: STRING = "/search"
+	login_uri: STRING = "/api/login"
+
+	queries_uri: STRING = "/api/search"
 
 feature -- Access: graph
 

@@ -52,7 +52,7 @@ feature --HTTP Methods
 			if attached {USER} req.execution_variable ("user") as l_user then
 				if attached {USER} user_dao.retrieve_by_name_and_password (l_user.user_name, l_user.password) as a_user then
 					l_cj := collection_json_minimal_builder (req)
-					l_cj.add_link (new_link (req.absolute_script_url (home_uri), "home","Home API",Void,Void))
+					l_cj.add_link (new_link (req.absolute_script_url (api_uri), "home","Home API",Void,Void))
 					l_cj.add_link (new_link (req.absolute_script_url (graph_uri), "graphs","Home Graph",Void,Void))
 					l_cj.add_link (new_link (req.absolute_script_url (user_id_uri (a_user.id)), "user","Home User",Void,Void))
 					if attached json.value (l_cj) as l_cj_answer then
@@ -61,7 +61,7 @@ feature --HTTP Methods
 
 				else
 					l_cj := collection_json_minimal_builder (req)
-					l_cj.add_link (new_link (req.absolute_script_url (home_uri), "home","Home API",Void,Void))
+					l_cj.add_link (new_link (req.absolute_script_url (api_uri), "home","Home API",Void,Void))
 					l_cj.add_link (new_link (req.absolute_script_url (graph_uri), "graphs","Home Graph",Void,Void))
 					l_cj.add_link (new_link (req.absolute_script_url (register_uri),"register", "User Register", Void, Void))
 					l_cj.set_error (new_error ("User name does not exist or the password is wrong", "005", "The user name " + l_user.user_name + " not exist in the system or the password was wrong, try again"))
@@ -71,7 +71,7 @@ feature --HTTP Methods
 				end
 			else
 				l_cj := collection_json_minimal_builder (req)
-				l_cj.add_link (new_link (req.absolute_script_url (home_uri), "home","Home API",Void,Void))
+				l_cj.add_link (new_link (req.absolute_script_url (api_uri), "home","Home API",Void,Void))
 				l_cj.add_link (new_link (req.absolute_script_url (graph_uri), "graphs","Home Graph",Void,Void))
 				l_cj.add_link (new_link (req.absolute_script_url (register_uri),"register", "User Register", Void, Void))
 				l_cj.set_error (new_error ("Bad Request", "005", "User does not exist"))

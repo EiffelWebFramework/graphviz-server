@@ -1,15 +1,12 @@
 /* 2001-05-25 (mca) : collection.js */
 /* Designing Hypermedia APIs by Mike Amundsen (2011) */
 
-var username = '';
-var password = '';
-
 var cjs = function() {
   
   var g = {};
   g.data = {};
   g.item = {};
-  g.collectionUrl = 'http://127.0.0.1:8190'; 
+  g.collectionUrl = ''; 
   g.contentType = 'application/vnd.collection+json';
   g.filterUrl = '';
   g.inputForm=true;
@@ -22,7 +19,7 @@ var cjs = function() {
       loadList(unescape(g.filterUrl));
     }
     else {
-      loadList();    
+      loadList("/api");    
     }
     showLinks();
     showItems();
@@ -32,39 +29,27 @@ var cjs = function() {
 
   function loadList(href) {
     var ajax;
-    var url =  (href === undefined) ? g.collectionUrl + "/" : g.collectionUrl + href ;
-  
-	
+  var url = (href || g.collectionUrl);
     ajax=new XMLHttpRequest();
 	if(ajax) {
-	  if (href === '/login') {
-		username = prompt('Please enter your username',' ');
-		password = prompt('Please enter your password',' ');
-		ajax.onreadystatechange = function() { 
-				g.data = JSON.parse(ajax.responseText);
-		   }
-		
-		ajax.open("get", url, false);
-		ajax.setRequestHeader("Authorization", "Basic " + btoa(username + ":" + password));
+	 	ajax.open('get',url,false);
+		ajax.setRequestHeader("Authorization", "Basic " + btoa(Cookies.get('username') + ":" + Cookies.get('password')));
 		ajax.send(null);
 		
-	  } else {	
-	    if (username !== '') {
-			ajax.onreadystatechange = function() { 
-				g.data = JSON.parse(ajax.responseText);
-		   }
-		}
-		ajax.open('get',url,false);
-		ajax.setRequestHeader("Authorization", "Basic " + btoa(username + ":" + password));
-		ajax.send(null);
-		
-		if(ajax.status===200) {
+		if(ajax.status ===200) {
 			g.data = JSON.parse(ajax.responseText);
+		} else if (ajax.status===401) {
+		    var username = prompt ("User");
+			var password = prompt ("Passwowd");
+			Cookies.set('username', username, { expires: 600 }).set('password', password,{ expires: 600 });
+			ajax.open("get", url, false);
+			ajax.setRequestHeader("Authorization", "Basic " + btoa(username + ":" + password));
+			ajax.send("");
+			if (ajax.status == 200) {
+				g.data = JSON.parse(ajax.responseText)
+			}
 		}
 	  }
-	  
-      
-    }
   }
 
   function loadItem(href) {
@@ -73,6 +58,7 @@ var cjs = function() {
     ajax=new XMLHttpRequest();
     if(ajax) {
       ajax.open('get',href,false);
+	  ajax.setRequestHeader("Authorization", "Basic " + btoa(Cookies.get('username') + ":" + Cookies.get('password')));
       ajax.send(null);
       if(ajax.status===200) {
         g.etag = ajax.getResponseHeader('etag');
@@ -185,8 +171,8 @@ var cjs = function() {
         if(coll[i].rel!=='profile' && coll[i].rel!=='author') {
           a.onclick = function(){filterData(this.href, this.rel); return false;};
         }
-
-        a.appendChild(document.createTextNode(coll[i].prompt || coll[i].rel));
+		
+		a.appendChild(document.createTextNode(coll[i].prompt || coll[i].rel));
 
         li = document.createElement('li');
         li.appendChild(a);         
@@ -427,25 +413,26 @@ var cjs = function() {
       etag = form.getAttribute('etag');
 	  
 	  var path = unescape(g.filterUrl)
-
-	  href = href + path.slice(1,path.length);
-	  
-      if(href)
+	  if (href.indexOf (path) === -1) {
+		href = href + path.substring(1,path.length);
+	  }
+	  if(href)
       {
         ajax=new XMLHttpRequest();
         if(ajax) {
           if(etag && etag!=='') {
             ajax.open('put',href,false);
-            ajax.setRequestHeader('if-match',etag);
+		    ajax.setRequestHeader('if-match',etag);
           }
           else {
             ajax.open('post',href,false);          
           }
+		  ajax.setRequestHeader("Authorization", "Basic " + btoa(Cookies.get('username') + ":" + Cookies.get('password')));
           ajax.setRequestHeader('content-type',g.contentType);
           ajax.send(item);
           if(ajax.status>399) {
             alert('Error sending task!\n'+ajax.status);
-          }
+	      }
           else {
             window.location = window.location;
           }
@@ -465,6 +452,7 @@ var cjs = function() {
         ajax=new XMLHttpRequest();
         if(ajax) {
           ajax.open('delete',href,false);
+		  ajax.setRequestHeader("Authorization", "Basic " + btoa(Cookies.get('username') + ":" + Cookies.get('password')));
           ajax.setRequestHeader('if-match',etag);
           ajax.send(null);
           if(ajax.status>399) {
@@ -494,12 +482,17 @@ var cjs = function() {
     }
     return id;
   }
+  
 
+
+  
   var that = {};
   that.init = init;
   that.g = g;
   return that;
 };
+
+
 
 
 /* start the app */
@@ -508,4 +501,8 @@ window.onload = function() {
   c = cjs();
   c.g.collectionUrl = 'http://127.0.0.1:8190';
   c.init();
+  
 };
+
+
+
