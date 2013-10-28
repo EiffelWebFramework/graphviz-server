@@ -1,6 +1,5 @@
 note
 	description: "{USER_LOGIN_HANDLER} handler to authenticate a user"
-	author: ""
 	date: "$Date$"
 	revision: "$Revision$"
 
@@ -9,11 +8,11 @@ class
 
 inherit
 
-	WSF_FILTER_CONTEXT_HANDLER [FILTER_HANDLER_CONTEXT]
+	WSF_FILTER
 
-	WSF_URI_TEMPLATE_CONTEXT_HANDLER [FILTER_HANDLER_CONTEXT]
+	WSF_URI_TEMPLATE_HANDLER
 
-	WSF_RESOURCE_CONTEXT_HANDLER_HELPER [FILTER_HANDLER_CONTEXT]
+	WSF_RESOURCE_HANDLER_HELPER
 		redefine
 			do_get
 		end
@@ -27,16 +26,16 @@ inherit
 
 feature -- execute
 
-	execute (ctx: FILTER_HANDLER_CONTEXT; req: WSF_REQUEST; res: WSF_RESPONSE)
+	execute (req: WSF_REQUEST; res: WSF_RESPONSE)
 			-- Execute request handler
 		do
-			execute_methods (ctx, req, res)
-			execute_next (ctx, req, res)
+			execute_methods (req, res)
+			execute_next (req, res)
 		end
 
 feature --HTTP Methods
 
-	do_get (ctx: FILTER_HANDLER_CONTEXT; req: WSF_REQUEST; res: WSF_RESPONSE)
+	do_get (req: WSF_REQUEST; res: WSF_RESPONSE)
 			--| Maybe in this case is better to use URI_templates and send a GET request
 
 			-- Here the convention is the following.
@@ -50,10 +49,10 @@ feature --HTTP Methods
 			l_cj: CJ_COLLECTION
 		do
 			initialize_converters (json)
-			if attached {USER} ctx.user as l_user then
+			if attached {USER} req.execution_variable ("user") as l_user then
 				if attached {USER} user_dao.retrieve_by_name_and_password (l_user.user_name, l_user.password) as a_user then
 					l_cj := collection_json_minimal_builder (req)
-					l_cj.add_link (new_link (req.absolute_script_url (home_uri), "home","Home API",Void,Void))
+					l_cj.add_link (new_link (req.absolute_script_url (api_uri), "home","Home API",Void,Void))
 					l_cj.add_link (new_link (req.absolute_script_url (graph_uri), "graphs","Home Graph",Void,Void))
 					l_cj.add_link (new_link (req.absolute_script_url (user_id_uri (a_user.id)), "user","Home User",Void,Void))
 					if attached json.value (l_cj) as l_cj_answer then
@@ -62,7 +61,7 @@ feature --HTTP Methods
 
 				else
 					l_cj := collection_json_minimal_builder (req)
-					l_cj.add_link (new_link (req.absolute_script_url (home_uri), "home","Home API",Void,Void))
+					l_cj.add_link (new_link (req.absolute_script_url (api_uri), "home","Home API",Void,Void))
 					l_cj.add_link (new_link (req.absolute_script_url (graph_uri), "graphs","Home Graph",Void,Void))
 					l_cj.add_link (new_link (req.absolute_script_url (register_uri),"register", "User Register", Void, Void))
 					l_cj.set_error (new_error ("User name does not exist or the password is wrong", "005", "The user name " + l_user.user_name + " not exist in the system or the password was wrong, try again"))
@@ -72,7 +71,7 @@ feature --HTTP Methods
 				end
 			else
 				l_cj := collection_json_minimal_builder (req)
-				l_cj.add_link (new_link (req.absolute_script_url (home_uri), "home","Home API",Void,Void))
+				l_cj.add_link (new_link (req.absolute_script_url (api_uri), "home","Home API",Void,Void))
 				l_cj.add_link (new_link (req.absolute_script_url (graph_uri), "graphs","Home Graph",Void,Void))
 				l_cj.add_link (new_link (req.absolute_script_url (register_uri),"register", "User Register", Void, Void))
 				l_cj.set_error (new_error ("Bad Request", "005", "User does not exist"))
@@ -90,8 +89,6 @@ feature --HTTP Methods
 		do
 			create h.make
 			h.put_content_type ("application/vnd.collection+json")
-			h.add_header_key_value ("Access-Control-Allow-Origin","*")
-
 			l_msg := msg
 			h.put_content_length (l_msg.count)
 			if attached req.request_time as time then

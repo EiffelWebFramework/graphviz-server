@@ -15,18 +15,30 @@ inherit
 			execute
 		end
 
-	WSF_ROUTED_SERVICE
+		WSF_ROUTED_SKELETON_SERVICE
 		rename
 			execute as execute_router
+		undefine
+			requires_proxy
 		redefine
 			execute_default
 		end
+
+	WSF_URI_TEMPLATE_HELPER_FOR_ROUTED_SERVICE
+
+	WSF_HANDLER_HELPER
+
+	WSF_NO_PROXY_POLICY
 
 	WSF_FILTER
 		rename
 			execute as execute_router
 		end
 
+	SHARED_EXECUTION_ENVIRONMENT
+		export
+			{NONE} all
+		end
 	WSF_HANDLER_HELPER
 
 	COLLECTION_JSON_HELPER
@@ -47,84 +59,48 @@ feature {NONE} -- Initialization
 			make_and_launch
 		end
 
-	create_filter
-			-- Create `filter'
-		do
-			create {WSF_LOGGING_FILTER} filter
-		end
 
 	setup_router
 		local
-			user_login_authentication_filter,
-			user_authentication_filter,
-			user_graph_authentication_filter: AUTHENTICATION_FILTER
-
-			render_handler: RENDER_HANDLER
-			root_handler: ROOT_HANDLER
-			graph_handler: GRAPH_HANDLER
-			register_handler: USER_REGISTER_HANDLER
-			login_handler: USER_LOGIN_HANDLER
-			user_graph_handler: USER_GRAPH_HANDLER
-			user_handler: USER_HANDLER
+			fhdl: WSF_FILE_SYSTEM_HANDLER
 		do
-			create root_handler
-			create render_handler
-			create register_handler
-			create user_graph_handler
-			create login_handler
-			create user_handler
-			create graph_handler
-
-				-- user login authentication filter
-			create user_login_authentication_filter
-			user_login_authentication_filter.set_next (login_handler)
-
-				-- user authentication filter
-			create user_authentication_filter
-			user_authentication_filter.set_next (user_handler)
-
-				-- user graph authentication filter
-			create user_graph_authentication_filter
-			user_graph_authentication_filter.set_next (user_graph_handler)
 
 				-- the uri templates that we have here are opaque, only for API developer.
 				-- the client should don't take care of it
 
-				-- root
-			router.map_with_request_methods (create {WSF_URI_MAPPING}.make ("/", root_handler), router.methods_GET)
+				-- Home
+			configure_api_root
 
-				-- register a user
-			router.map_with_request_methods (create {WSF_URI_MAPPING}.make_trailing_slash_ignored (register_uri, register_handler), router.methods_GET_POST)
+				-- Register a user
+			configure_register_user
 
 				-- login a user
-			router.map_with_request_methods (create {WSF_URI_CONTEXT_MAPPING [FILTER_HANDLER_CONTEXT]}.make_trailing_slash_ignored (login_uri, user_login_authentication_filter), router.methods_GET)
+			configure_login
 
 				--| Weird behavior the order of handler affect the selection
 				--|/graph/{id} should be handled by graph
 				--|/graph/{id}.{type} should be handled by render
 				--| but if we put first the graph handler the last uri template also will be handled by graph handler.
 
-				--graph
-				--			router.map_with_request_methods (create {WSF_URI_MAPPING}.make_trailing_slash_ignored (graph_uri, graph_handler), router.methods_GET)
-				--			router.map_with_request_methods (create {WSF_URI_TEMPLATE_MAPPING}.make_from_template (graph_id_uri_template, graph_handler), router.methods_GET)
+				-- render handler
+			configure_render_handler
 
-				--render handler
-			router.map_with_request_methods (create {WSF_URI_TEMPLATE_MAPPING}.make_from_template (graph_id_type_uri_template, render_handler), router.methods_GET)
-			router.map_with_request_methods (create {WSF_URI_TEMPLATE_MAPPING}.make_from_template (user_graph_id_type_uri_template, render_handler), router.methods_GET)
+				-- graph
+			configure_graph
 
-				--graph
-			router.map_with_request_methods (create {WSF_URI_MAPPING}.make_trailing_slash_ignored (graph_uri, graph_handler), router.methods_GET)
-			router.map_with_request_methods (create {WSF_URI_TEMPLATE_MAPPING}.make_from_template (graph_id_uri_template, graph_handler), router.methods_GET)
-			router.map_with_request_methods (create {WSF_URI_TEMPLATE_MAPPING}.make_from_template (graph_uri_page_template, graph_handler), router.methods_GET)
-
-				--user
-			router.handle_with_request_methods (user_id_uri_template.template, user_authentication_filter, router.methods_GET)
+				-- user
+			configure_user
 
 				-- user_graph handler
-			router.handle_with_request_methods (user_graph_uri.template, user_graph_authentication_filter, router.methods_GET_POST)
-			router.handle_with_request_methods (user_graph_id_uri_template.template, user_graph_authentication_filter, router.methods_GET_PUT_DELETE)
+			configure_user_graph_handler
 
-			router.handle_with_request_methods ("/doc", create {WSF_ROUTER_SELF_DOCUMENTATION_HANDLER}.make_hidden (router), router.methods_GET)
+			-- queries
+			configure_queries
+				--			router.handle_with_request_methods ("/doc", create {WSF_ROUTER_SELF_DOCUMENTATION_HANDLER}.make_hidden (router), router.methods_GET)
+
+			create fhdl.make_hidden ("www")
+			fhdl.set_directory_index (<<"index.html">>)
+			router.handle_with_request_methods ("/", fhdl, router.methods_GET)
 		end
 
 	setup_filter
@@ -133,13 +109,182 @@ feature {NONE} -- Initialization
 			filter.set_next (Current)
 		end
 
+	create_filter
+			-- Create `filter'
+		do
+			create {WSF_CORS_FILTER} filter
+		end
+
+feature -- Configure Resources Routes
+
+	configure_api_root
+		local
+			l_options_filter: WSF_CORS_OPTIONS_FILTER
+			l_root_handler: ROOT_HANDLER
+			l_methods: WSF_REQUEST_METHODS
+		do
+			create l_options_filter.make (router)
+			create l_root_handler
+			l_options_filter.set_next (l_root_handler)
+			create l_methods
+			l_methods.enable_options
+			l_methods.enable_get
+			router.handle_with_request_methods (api_uri, create {WSF_URI_TEMPLATE_AGENT_HANDLER}.make (agent l_options_filter.execute), l_methods)
+		end
+
+	configure_register_user
+		local
+			l_options_filter: WSF_CORS_OPTIONS_FILTER
+			l_register_handler: USER_REGISTER_HANDLER
+			l_methods: WSF_REQUEST_METHODS
+		do
+			create l_options_filter.make (router)
+			create l_register_handler
+			l_options_filter.set_next (l_register_handler)
+
+			create l_methods
+			l_methods.enable_options
+			l_methods.enable_get
+			l_methods.enable_post
+			router.handle_with_request_methods (register_uri, create {WSF_URI_TEMPLATE_AGENT_HANDLER}.make (agent l_options_filter.execute), l_methods)
+		end
+
+	configure_graph
+		local
+			l_options_filter: WSF_CORS_OPTIONS_FILTER
+			l_graph_handler: GRAPH_HANDLER
+			l_methods: WSF_REQUEST_METHODS
+		do
+			create l_options_filter.make (router)
+			create l_graph_handler
+			l_options_filter.set_next (l_graph_handler)
+
+			create l_methods
+			l_methods.enable_options
+			l_methods.enable_get
+			router.handle_with_request_methods (graph_uri, create {WSF_URI_TEMPLATE_AGENT_HANDLER}.make (agent l_options_filter.execute), l_methods)
+
+			create l_methods
+			l_methods.enable_options
+			l_methods.enable_get
+			router.handle_with_request_methods (graph_id_uri_template.template, create {WSF_URI_TEMPLATE_AGENT_HANDLER}.make (agent l_options_filter.execute), l_methods)
+
+			create l_methods
+			l_methods.enable_options
+			l_methods.enable_get
+			router.handle_with_request_methods (graph_uri_page_template.template, create {WSF_URI_TEMPLATE_AGENT_HANDLER}.make (agent l_options_filter.execute), l_methods)
+		end
+
+	configure_login
+		local
+			l_options_filter: WSF_CORS_OPTIONS_FILTER
+			l_authentication_filter: AUTHENTICATION_FILTER
+			l_login_handler: USER_LOGIN_HANDLER
+			l_methods: WSF_REQUEST_METHODS
+		do
+			create l_options_filter.make (router)
+			create l_authentication_filter
+			create l_login_handler
+			l_options_filter.set_next (l_authentication_filter)
+			l_authentication_filter.set_next (l_login_handler)
+
+			create l_methods
+			l_methods.enable_options
+			l_methods.enable_get
+			router.handle_with_request_methods (login_uri, create {WSF_URI_TEMPLATE_AGENT_HANDLER}.make (agent l_options_filter.execute), l_methods)
+		end
+
+	configure_user
+		local
+			l_options_filter: WSF_CORS_OPTIONS_FILTER
+			l_authentication_filter: AUTHENTICATION_FILTER
+			l_user_handler: USER_HANDLER
+			l_methods: WSF_REQUEST_METHODS
+		do
+			create l_options_filter.make (router)
+			create l_authentication_filter
+			create l_user_handler
+			l_options_filter.set_next (l_authentication_filter)
+			l_authentication_filter.set_next (l_user_handler)
+
+			create l_methods
+			l_methods.enable_options
+			l_methods.enable_get
+			router.handle_with_request_methods (user_id_uri_template.template, create {WSF_URI_TEMPLATE_AGENT_HANDLER}.make (agent l_options_filter.execute), l_methods)
+		end
+
+	configure_render_handler
+		local
+			l_options_filter: WSF_CORS_OPTIONS_FILTER
+			l_render_handler: RENDER_HANDLER
+			l_methods: WSF_REQUEST_METHODS
+		do
+			create l_options_filter.make (router)
+			create l_render_handler
+			l_options_filter.set_next (l_render_handler)
+
+			create l_methods
+			l_methods.enable_options
+			l_methods.enable_get
+			router.handle_with_request_methods (graph_id_type_uri_template.template, create {WSF_URI_TEMPLATE_AGENT_HANDLER}.make (agent l_options_filter.execute), l_methods)
+
+			create l_methods
+			l_methods.enable_options
+			l_methods.enable_get
+			router.handle_with_request_methods (user_graph_id_type_uri_template.template, create {WSF_URI_TEMPLATE_AGENT_HANDLER}.make (agent l_options_filter.execute), l_methods)
+		end
+
+	configure_user_graph_handler
+		local
+			l_options_filter: WSF_CORS_OPTIONS_FILTER
+			l_authentication_filter: AUTHENTICATION_FILTER
+			l_user_graph_handler: USER_GRAPH_HANDLER
+			l_methods: WSF_REQUEST_METHODS
+		do
+			create l_options_filter.make (router)
+			create l_authentication_filter
+			create l_user_graph_handler
+			l_options_filter.set_next (l_authentication_filter)
+			l_authentication_filter.set_next (l_user_graph_handler)
+
+			create l_methods
+			l_methods.enable_options
+			l_methods.enable_get
+			l_methods.enable_post
+			router.handle_with_request_methods (user_graph_uri.template, create {WSF_URI_TEMPLATE_AGENT_HANDLER}.make (agent l_options_filter.execute), l_methods)
+
+			create l_methods
+			l_methods.enable_options
+			l_methods.enable_get
+			l_methods.enable_put
+			l_methods.enable_delete
+			router.handle_with_request_methods (user_graph_id_uri_template.template, create {WSF_URI_TEMPLATE_AGENT_HANDLER}.make (agent l_options_filter.execute), l_methods)
+		end
+
+
+	configure_queries
+		local
+			l_options_filter: WSF_CORS_OPTIONS_FILTER
+			l_search_handler: SEARCH_HANDLER
+			l_methods: WSF_REQUEST_METHODS
+		do
+			create l_options_filter.make (router)
+			create l_search_handler
+			l_options_filter.set_next (l_search_handler)
+			create l_methods
+			l_methods.enable_options
+			l_methods.enable_get
+			router.handle_with_request_methods (queries_uri, create {WSF_URI_TEMPLATE_AGENT_HANDLER}.make (agent l_options_filter.execute), l_methods)
+		end
+
 feature -- Execution
 
 	execute (req: WSF_REQUEST; res: WSF_RESPONSE)
 		do
-			initialize_converters (json)
 			Precursor (req, res)
+			initialize_converters (json)
 		end
+
 
 	execute_default (req: WSF_REQUEST; res: WSF_RESPONSE)
 			-- I'm using this method to handle the method not allowed response
@@ -148,8 +293,8 @@ feature -- Execution
 		local
 			h: HTTP_HEADER
 			l_description: STRING
-			l_cj : CJ_COLLECTION
-			l_allow : STRING
+			l_cj: CJ_COLLECTION
+			l_allow: STRING
 			def: WSF_DEFAULT_ROUTER_RESPONSE
 		do
 			initialize_converters (json)
@@ -164,22 +309,22 @@ feature -- Execution
 				create h.make
 				h.put_content_type ("application/vnd.collection+json")
 				l_cj := collection_json_root_builder (req)
-
 				create l_allow.make_empty
-				across router.allowed_methods_for_request (req) as c loop
-						l_allow.append (c.item)
-						l_allow.append (",")
+				across
+					router.allowed_methods_for_request (req) as c
+				loop
+					l_allow.append (c.item)
+					l_allow.append (",")
 				end
 				if not l_allow.is_empty then
 					l_allow.remove_tail (1)
 					l_description := req.request_method + req.request_uri + " is not allowed" + "%N"
-					l_cj.set_error ( new_error ("Method not allowed", "002", l_description))
-
+					l_cj.set_error (new_error ("Method not allowed", "002", l_description))
 					h.put_header_key_value ({HTTP_HEADER_NAMES}.header_allow, l_allow)
 					res.set_status_code ({HTTP_STATUS_CODE}.method_not_allowed)
 				else
 					l_description := req.request_method + req.request_uri + " is not found" + "%N"
-					l_cj.set_error ( new_error ("Method not found", "005", l_description))
+					l_cj.set_error (new_error ("Method not found", "005", l_description))
 					res.set_status_code ({HTTP_STATUS_CODE}.not_found)
 				end
 				h.put_current_date

@@ -1,10 +1,10 @@
 note
-	description: "Summary description for {ROOT_HANDLER}."
+	description: "Summary description for {SEARCH_HANDLER}."
 	date: "$Date$"
 	revision: "$Revision$"
 
 class
-	ROOT_HANDLER
+	SEARCH_HANDLER
 
 inherit
 
@@ -16,31 +16,30 @@ inherit
 			new_mapping as new_uri_mapping
 		end
 
+	WSF_URI_TEMPLATE_HANDLER
+		rename
+			execute as uri_template_execute,
+			new_mapping as new_uri_template_mapping
+		select
+			new_uri_template_mapping
+		end
+
 	WSF_RESOURCE_HANDLER_HELPER
 		redefine
 			do_get
 		end
 
-	SHARED_EJSON
+	COLLECTION_JSON_HELPER
+
+	SHARED_DATABASE_API
 
 	REFACTORING_HELPER
 
-	COLLECTION_JSON_HELPER
-
-	WSF_SELF_DOCUMENTED_HANDLER
-
-feature -- Documentation
-
-	mapping_documentation (m: WSF_ROUTER_MAPPING; a_request_methods: detachable WSF_REQUEST_METHODS): WSF_ROUTER_MAPPING_DOCUMENTATION
-		do
-			create Result.make (m)
-			Result.add_description ("Main entry point")
-		end
 
 feature -- execute
 
 	execute (req: WSF_REQUEST; res: WSF_RESPONSE)
-			-- Execute request handler	
+			-- Execute request handler
 		do
 			execute_methods (req, res)
 			execute_next (req, res)
@@ -58,24 +57,32 @@ feature -- execute
 			execute_methods (req, res)
 		end
 
-feature --HTTP Methods
+feature -- HTTP Methods
 
 	do_get (req: WSF_REQUEST; res: WSF_RESPONSE)
 			-- Using GET to retrieve resource information.
 			-- If the GET request is SUCCESS, we response with
 			-- 200 OK, and a representation of the root collection JSON
 			-- If the GET request is not SUCCESS, we response with
-			-- 404 Resource not found
+			-- 404 Resource not found and their corresponding error in collection json
 		do
-			initialize_converters (json)
-			if attached req.orig_path_info as orig_path then
-				if attached json.value (collection_json_root_builder (req)) as l_cj_answer then
-					compute_response (req, res, l_cj_answer.representation, {HTTP_STATUS_CODE}.ok)
+			if attached req.query_parameter ("search") as l_query_parameter then
+				if l_query_parameter.is_string and then attached l_query_parameter.as_string.value as l_value then
+					if attached graph_dao.retrieve_all_by_title (l_value) as graphs and then attached {CJ_COLLECTION} collection_json_graph (req, Void) as l_cj then
+						across
+							graphs as ic
+						loop
+							build_item (req, ic.item, l_cj)
+						end
+						if attached json.value (l_cj) as l_cj_answer then
+							compute_response_get (req, res, l_cj_answer.representation, {HTTP_STATUS_CODE}.ok)
+						end
+					end
 				end
 			end
 		end
 
-	compute_response (req: WSF_REQUEST; res: WSF_RESPONSE; msg: STRING; status_code: INTEGER)
+	compute_response_get (req: WSF_REQUEST; res: WSF_RESPONSE; msg: STRING; status_code: INTEGER)
 		local
 			h: HTTP_HEADER
 			l_msg: STRING
@@ -91,9 +98,5 @@ feature --HTTP Methods
 			res.put_header_text (h.string)
 			res.put_string (l_msg)
 		end
-
-note
-	copyright: "2011-2012, Javier Velilla and others"
-	license: "Eiffel Forum License v2 (see http://www.eiffel.com/licensing/forum.txt)"
 
 end

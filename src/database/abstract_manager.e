@@ -1,6 +1,5 @@
 note
 	description: "Summary description for {ABSTRACT_MANAGER}."
-	author: ""
 	date: "$Date$"
 	revision: "$Revision$"
 

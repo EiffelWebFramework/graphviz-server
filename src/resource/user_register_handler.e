@@ -1,6 +1,5 @@
 note
 	description: "{USER_REGISTER_HANDLER} handler to register new users"
-	author: ""
 	date: "$Date$"
 	revision: "$Revision$"
 
@@ -8,6 +7,8 @@ class
 	USER_REGISTER_HANDLER
 
 inherit
+
+	WSF_FILTER
 
 	WSF_URI_HANDLER
 		rename
@@ -30,6 +31,14 @@ inherit
 
 
 feature -- execute
+
+	execute (req: WSF_REQUEST; res: WSF_RESPONSE)
+			-- Execute request handler
+		do
+			execute_methods (req, res)
+			execute_next (req, res)
+		end
+
 
 	uri_execute (req: WSF_REQUEST; res: WSF_RESPONSE)
 			-- Execute request handler
@@ -76,8 +85,6 @@ feature --HTTP Methods
 		do
 			create h.make
 			h.put_content_type ("application/vnd.collection+json")
-			h.add_header_key_value ("Access-Control-Allow-Origin","*")
-
 			l_msg := msg
 			if user_id > 0 and then status_code = {HTTP_STATUS_CODE}.created then
 				l_location := req.absolute_script_url (user_id_uri (user_id))

@@ -1,6 +1,5 @@
 note
 	description: "Summary description for {RENDER_HANDLER}."
-	author: ""
 	date: "$Date$"
 	revision: "$Revision$"
 
@@ -8,6 +7,8 @@ class
 	RENDER_HANDLER
 
 inherit
+
+	WSF_FILTER
 
 	WSF_URI_HANDLER
 		rename
@@ -51,6 +52,13 @@ feature -- Documentation
 		end
 
 feature -- execute
+
+	execute (req: WSF_REQUEST; res: WSF_RESPONSE)
+			-- Execute request handler
+		do
+			execute_methods (req, res)
+			execute_next (req, res)
+		end
 
 	uri_execute (req: WSF_REQUEST; res: WSF_RESPONSE)
 			-- Execute request handler
@@ -204,7 +212,6 @@ feature --HTTP Methods
 		do
 			create h.make
 			h.put_content_type ("application/vnd.collection+json")
-			h.add_header_key_value ("Access-Control-Allow-Origin","*")
 			l_msg := msg
 			h.put_content_length (l_msg.count)
 			if attached req.request_time as time then

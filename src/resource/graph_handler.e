@@ -1,6 +1,5 @@
 note
 	description: "GRAPH_HANDLER handle the graph resources, it allow retrieve graph for anonymous users"
-	author: ""
 	date: "$Date$"
 	revision: "$Revision$"
 
@@ -8,6 +7,8 @@ class
 	GRAPH_HANDLER
 
 inherit
+
+	WSF_FILTER
 
 	WSF_URI_HANDLER
 		rename
@@ -40,6 +41,13 @@ feature -- Initialization
 
 
 feature -- execute
+
+	execute (req: WSF_REQUEST; res: WSF_RESPONSE)
+			-- Execute request handler
+		do
+			execute_methods (req, res)
+			execute_next (req, res)
+		end
 
 	uri_execute (req: WSF_REQUEST; res: WSF_RESPONSE)
 			-- Execute request handler
@@ -90,7 +98,6 @@ feature -- HTTP Methods
 		do
 			create h.make
 			h.put_content_type ("application/vnd.collection+json")
-			h.add_header_key_value ("Access-Control-Allow-Origin","*")
 			l_msg := msg
 			h.put_content_length (l_msg.count)
 			if attached req.request_time as time then
@@ -143,9 +150,9 @@ feature -- Graph process
 				if l_offset.integer_value = 0 then
 					p_offset := 0
 				else
-					p_offset := l_offset.integer_value // 5
+					p_offset := l_offset.integer_value \\ 5
 				end
-				if attached graph_dao.retrieve_page (p_offset, l_offset.integer_value + 5) as graphs then
+				if attached graph_dao.retrieve_page (l_offset.integer_value + 5,p_offset) as graphs then
 					if attached {CJ_COLLECTION} collection_json_graph (req, Void) as l_cj then
 						across
 							graphs as ic
@@ -153,14 +160,14 @@ feature -- Graph process
 							build_item (req, ic.item, l_cj)
 						end
 
-						l_pages :=  (l_count // 5) + 1
+						l_pages :=  (l_count \\ 5) + 1
 						if l_pages > 1 then
 							l_cj.add_link (new_link (req.absolute_script_url(graph_uri_page (0)), "first","Page 1 of " +l_pages.out,Void,Void))
 							if l_offset.integer_value >= 5 then
 								l_cj.add_link (new_link (req.absolute_script_url(graph_uri_page (l_offset.integer_value - 5)), "prev","Page " + (((l_offset.integer_value - 5) // 5)+1).out + " of " +l_pages.out,Void,Void))
 							end
 							if l_offset.integer_value <= l_count then
-								l_cj.add_link (new_link (req.absolute_script_url(graph_uri_page (l_offset.integer_value + 5)), "next","Page " + (((l_offset.integer_value + 5) // 5)+1).out + " of "+l_pages.out,Void,Void))
+								l_cj.add_link (new_link (req.absolute_script_url(graph_uri_page (l_offset.integer_value + 5)), "next","Page " + ((((l_offset.integer_value - 1) + 5) // 5)+1).out + " of "+l_pages.out,Void,Void))
 							end
 							l_cj.add_link (new_link (req.absolute_script_url(graph_uri_page ((l_pages-1) * 5)), "last","Page " + l_pages.out + " of "+l_pages.out,Void,Void))
 						else
@@ -174,7 +181,7 @@ feature -- Graph process
 				end
 			else
 				l_pages :=  (l_count // 5) + 1 -- Default value
-				if attached graph_dao.retrieve_page (0, 5) as graphs then
+				if attached graph_dao.retrieve_page (5, 0) as graphs then
 					if attached {CJ_COLLECTION} collection_json_graph (req, Void) as l_cj then
 						across
 							graphs as ic

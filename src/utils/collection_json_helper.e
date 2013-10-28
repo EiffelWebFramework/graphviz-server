@@ -1,6 +1,5 @@
 note
 	description: "Summary description for {COLLECTION_JSON_HELPER}."
-	author: ""
 	date: "$Date$"
 	revision: "$Revision$"
 
@@ -44,6 +43,20 @@ feature -- Collection + JSON
 			end
 			if attached prompt as l_prompt then
 				Result.set_prompt (l_prompt)
+			end
+		end
+
+	new_query (href: STRING_32; rel: STRING_32; prompt: detachable STRING_32; name: detachable STRING_32; data: detachable CJ_DATA): CJ_QUERY
+		do
+			create Result.make (href, rel)
+			if attached prompt as l_prompt then
+				Result.set_prompt (l_prompt)
+			end
+			if attached name as l_name then
+				Result.set_name (l_name)
+			end
+			if attached data as l_data then
+				Result.add_data (l_data)
 			end
 		end
 
@@ -108,10 +121,11 @@ feature -- Collection + JSON
 			col := collection_json_minimal_builder (req)
 
 				-- Links
-			col.add_link (new_link (req.absolute_script_url (home_uri), "home", "Home API", Void, Void))
+			col.add_link (new_link (req.absolute_script_url (api_uri), "home", "Home API", Void, Void))
 			col.add_link (new_link (req.absolute_script_url (graph_uri), "graphs", "Home Graph", Void, Void))
 			col.add_link (new_link (req.absolute_script_url (register_uri), "register", "User Register", Void, Void))
 			col.add_link (new_link (req.absolute_script_url (login_uri), "login", "User Login", Void, Void))
+			col.add_query (new_query (req.absolute_script_url (queries_uri), "search", "Search by title", Void, new_data ("search", Void, "search")))
 			Result := col
 		end
 
@@ -137,7 +151,15 @@ feature -- Collection + JSON
 			            }
 			            
 			        ],
-			        "queries": [],
+			        "queries": [{
+			        	"href":"$QUERIES_URL",
+			        	"rel":"search",
+			        	"prompt":"Search by title",
+			        	"data" : [
+			        			{"name":"title","value":""}
+			        		]
+			        	}
+			        	],
 			        "templates": [],
 			        "version": "1.0"
 			    	}
@@ -166,7 +188,7 @@ feature -- Collection + JSON
 			col := collection_json_minimal_builder (req)
 
 				-- Links
-			col.add_link (new_link (req.absolute_script_url (home_uri), "home", "Home API", Void, Void))
+			col.add_link (new_link (req.absolute_script_url (api_uri), "home", "Home API", Void, Void))
 			col.add_link (new_link (req.absolute_script_url (register_uri), "register", "User Register", Void, Void))
 			col.add_link (new_link (req.absolute_script_url (login_uri), "login", "User Login", Void, Void))
 			Result := col
@@ -195,7 +217,7 @@ feature -- Collection + JSON
 	collection_json_user_graph (req: WSF_REQUEST; user_id: INTEGER): STRING
 		do
 			create Result.make_from_string (collection_json_user_graph_tpl)
-			Result.replace_substring_all ("$HOME_URL", req.absolute_script_url (home_uri))
+			Result.replace_substring_all ("$HOME_URL", req.absolute_script_url (api_uri))
 			Result.replace_substring_all ("$USER_URI", req.absolute_script_url (user_id_uri (user_id)))
 			Result.replace_substring_all ("$USER_GRAPH_URI", req.absolute_script_url (user_id_graph_uri (user_id)))
 		end
@@ -264,7 +286,7 @@ feature -- Collection + JSON
 			create col.make_with_href (req.absolute_script_url (user_id_graph_uri (user_id)))
 
 				-- Links
-			create lnk.make (req.absolute_script_url (home_uri), "Home")
+			create lnk.make (req.absolute_script_url (api_uri), "Home")
 			lnk.set_prompt ("Home Graph")
 			col.add_link (lnk)
 			create lnk.make (req.absolute_script_url (user_id_uri (user_id)), "User")
